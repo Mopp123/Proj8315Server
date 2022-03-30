@@ -6,7 +6,9 @@
 #include <iterator>
 #include <algorithm>
 
+#include "game/Game.h"
 #include "Debug.h"
+
 
 Command::Command(char* raw, size_t size)
 {
@@ -39,6 +41,33 @@ Command::Command(const Command& other) :
 // -------------------------------------------------------
 
 
+Response test_func(const char* requester, const std::vector<std::string>& args)
+{
+	std::string userStr(requester, 32);
+	Debug::log("Processing test command requested by: " + userStr + "\nargs:");
+	for(const std::string& arg : args)
+		Debug::log(arg);
+
+	return { nullptr, 0 };
+}
+
+
+Response func_createFaction(const char* requester, const std::vector<std::string>& args)
+{
+	std::string userStr(requester, 32);
+	if(args.size() == 1)
+	{
+		return Game::get()->addFaction(userStr, args[0]);
+	}
+
+	return { nullptr, 0 };
+}
+
+
+CMDHandler::CMDHandler()
+{
+	_funcMapping.insert(std::make_pair(420, func_createFaction));
+}
 
 Response CMDHandler::processCommand(const Command& cmd)
 {
@@ -50,7 +79,7 @@ Response CMDHandler::processCommand(const Command& cmd)
 	auto iter = _funcMapping.find(cmd.getName());
 	if(iter != _funcMapping.end())
 	{
-		return (*_funcMapping[cmd.getName()])(cmd.getArgs());
+		return (*_funcMapping[cmd.getName()])(cmd.getRequester(), cmd.getArgs());
 	}
 	else
 	{
@@ -59,3 +88,6 @@ Response CMDHandler::processCommand(const Command& cmd)
 	}
 	
 }
+
+
+

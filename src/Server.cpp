@@ -88,6 +88,10 @@ void Server::run()
 		size_t readBytes = read(connSD, _pRecvBuf, _maxRecvBufLen);
 		if(readBytes >= CMD_MIN_LEN)
 		{
+
+			//std::string fullMessage(_pRecvBuf, readBytes);
+			//Debug::log("\nFULL MESSAGE:\n" + fullMessage + "\n");
+
 			size_t bodySize = findContentLength(_pRecvBuf, readBytes);
 			size_t bodyBeginPos = readBytes - bodySize;
 			Request req(connSD, _pRecvBuf + bodyBeginPos, bodySize);

@@ -17,11 +17,18 @@ private:
 	mutable std::mutex _mutex;
 
 	std::unordered_map<std::string, Faction> _factions;
+
+	static Game* s_pInstance;
+
 public:
 
 	Game();
+	Game(const Game&) = delete;
 	~Game();
 
+	Response addFaction(const std::string& userID, const std::string& factionName);
+	
+	static Game* get();
 
 private:
 

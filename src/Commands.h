@@ -42,10 +42,12 @@ class CMDHandler
 {
 private:
 
-	std::unordered_map<int32_t, Response(*)(const std::vector<std::string>&)> _funcMapping;
+	std::unordered_map<int32_t, Response(*)(const char* requester, const std::vector<std::string>&)> _funcMapping;
 
 public:
 	
+	CMDHandler();
+
 	Response processCommand(const Command& cmd);
 
 };

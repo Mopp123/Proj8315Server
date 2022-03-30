@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <string>
 
+#include "Commands.h"
 #include "Debug.h"
 
 
@@ -85,12 +86,11 @@ void Server::run()
 		//unsigned short clientPort = ntohs(clientAddress.sin_port);
 		
 		size_t readBytes = read(connSD, _pRecvBuf, _maxRecvBufLen);
-		if(readBytes > 0)
+		if(readBytes >= CMD_MIN_LEN)
 		{
-			// JUST TESTING ATM!!!
-			
 			size_t bodySize = findContentLength(_pRecvBuf, readBytes);
-			Request req = convertToReq(_pRecvBuf, readBytes, bodySize, connSD);
+			size_t bodyBeginPos = readBytes - bodySize;
+			Request req(connSD, _pRecvBuf + bodyBeginPos, bodySize);
 
 			//Debug::log("Parsed body size was: " + std::to_string(bodySize));
 			_reqHandler.addToReqQueue(req);
@@ -100,7 +100,7 @@ void Server::run()
 		}
 		else
 		{
-			Debug::log("Error on reading");
+			Debug::log("Error on reading. Invalid read byte count.");
 			close(connSD);
 		}
 	}
@@ -121,23 +121,25 @@ size_t Server::findContentLength(const PK_byte* data, size_t dataLen) const
 	return 0;
 }
 
+/*
 Request Server::convertToReq(PK_byte* data, size_t dataLen, size_t bodyLen, int clientSD)
 {
+	size_t bodyBegin = dataLen - bodyLen;
+	PK_byte messageType = data[bodyBegin];
+	std::vector<ByteBuffer> reqContent;
 	
-	PK_byte messageType = data[dataLen - bodyLen];
-	std::vector<ByteBuffer> reqBody;
-	
-	// JUST TESTING... (we assume that body contains messageType(byte) + message(str))
-	if(messageType == 2)
+	// attempt to parse user id, if it is contained in the data (its the next part in body after messageType)
+	char userID[32];
+	memset(userID, 0, 32);
+	if(bodyLen > 32)
 	{
-		ByteBuffer body(data + (dataLen - bodyLen + 1), bodyLen - 1);
-		reqBody.push_back(body);
+		memcpy(userID, data+ bodyBegin + 1, 32);
 	}
 
-
-
-	Request req(clientSD, (Request::ReqType)messageType, reqBody);
+	
+	
+	Request req(clientSD, data + bodyBegin, bodyLen);
 	return req;
 }
-
+*/
 

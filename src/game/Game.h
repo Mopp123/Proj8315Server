@@ -2,8 +2,13 @@
 
 #include <mutex>
 #include <string>
-#include <vector>
+#include <unordered_map>
 
+#include "Responses.h"
+#include "Faction.h"
+
+
+class Request;
 
 class Game
 {
@@ -11,18 +16,13 @@ private:
 
 	mutable std::mutex _mutex;
 
-	const int _maxMsgCount = 16;
-	int _lastMsgIndex = 0;
-	std::vector<std::string> _messages;
-
+	std::unordered_map<std::string, Faction> _factions;
 public:
 
 	Game();
 	~Game();
 
-	void addMessage(std::string msg);
-	std::string getLatestMessage() const;
-	std::vector<std::string> getMessageBoardContent() const;
 
-	
+private:
+
 };

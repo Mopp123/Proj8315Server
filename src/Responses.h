@@ -25,6 +25,7 @@ public:
 
 	inline size_t getSize() const { return _totalSize; }
 	inline const char* getData() const { return _pData; } 
+
 private:
 	std::string createHeader(size_t contentLength) const;
 };

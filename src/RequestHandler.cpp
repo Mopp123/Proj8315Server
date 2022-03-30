@@ -57,36 +57,32 @@ void RequestHandler::run()
 {
 	while(_run)
 	{
-		Request reqToHandle = _reqQueue.pop();
+		if(!_reqQueue.isEmpty())
+		{
+			Request req = _reqQueue.pop();
+			Response response = _cmdHandler.processCommand(req.getCommand());
+			send(req.getClientSD(), response.getData(), response.getSize(), 0);
+			close(req.getClientSD());
+		}	
+/*
 		Request::ReqType reqType = reqToHandle.getType();
 		if(reqType != Request::ReqType::REQ_EMPTY)
 		{
+			std::string userID(reqToHandle.getUserID(), 32);
+			Debug::log("Attempting to handle req by user: " + userID);
+
 			int sd = reqToHandle.getClientSD();
 
-			// JUST TESTING ATM...
-			if((int)reqType == 1)
+			switch(reqType)
 			{
-				// Get messages...
-				// Return only the latest message
-				std::string message = _gameRef.getLatestMessage();
-				Response response(message.data(), message.size());
-				send(sd, response.getData(), response.getSize(), 0);
-				
-				
-			}
-			else if((int)reqType == 2)
-			{
-				// Post message...
-				const ByteBuffer data = reqToHandle.getData()[0];
-				std::string message = data.getString();
-				Debug::log("MESSAGE WAS: " + message);
+				case Request::ReqType::REQ_CREATE_FACTION : 
+					break;
 
-				_gameRef.addMessage(message);
-
-				Response response(nullptr, 0);
-				send(sd, response.getData(), response.getSize(), 0);
+				default:
+					break;
 			}
+			
 			close(sd);
-		}
+		}*/
 	}
 }

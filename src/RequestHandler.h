@@ -1,47 +1,38 @@
 #pragma once
 
 #include "game/Game.h"
+#include "Commands.h"
 #include "ByteBuffer.h"
 #include <string>
 #include <vector>
 #include <queue>
 #include <mutex>
 
-#define NULL_REQUEST (Request(0, Request::ReqType::REQ_EMPTY, {}))
+#define NULL_REQUEST (Request(0, nullptr, 0))
+
+#define USER_ID_LEN 32
 
 class Request
 {
-public:
-
-	enum ReqType
-	{
-		REQ_EMPTY = 0x0,
-		REQ_CREATE_FACTION
-	};
-
 private:
-	
-
 	int _clientSD;
-	ReqType _type;
-
-	std::vector<ByteBuffer> _data;
+	Command _cmd;
 
 public:
 
-	Request(int clientSD, ReqType type, const std::vector<ByteBuffer>& data) : 
-		_clientSD(clientSD), _type(type), _data(data)
+	Request(int clientSD, char* data, size_t dataLen) : 
+		_clientSD(clientSD), _cmd(data, dataLen)
 	{}
 
 	Request(const Request& other) :
-		_clientSD(other._clientSD), _type(other._type), _data(other._data)
-	{}
+		_clientSD(other._clientSD), _cmd(other._cmd)
+	{
+	}
 
 	~Request() {}
 
-	inline ReqType getType() const { return _type; }
 	inline int getClientSD() const { return _clientSD; }
-	inline const std::vector<ByteBuffer>& getData() const { return _data; }
+	inline const Command& getCommand() const { return _cmd; }
 };
 
 
@@ -70,6 +61,7 @@ private:
 	
 	Server& _serverRef;
 	Game& _gameRef;
+	CMDHandler _cmdHandler;
 
 	RequestQueue _reqQueue;
 	bool _run = true;

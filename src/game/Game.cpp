@@ -1,51 +1,32 @@
 
 #include "Game.h"
+#include "RequestHandler.h"
 #include <cstring>
+#include <mutex>
 
 Game::Game()
 {
-	// prealloc..
-	for(int i = 0; i < _maxMsgCount; ++i)
-	{
-		_messages.push_back("");
-	}
-
-	addMessage("Test message");
 }
 
 Game::~Game()
 {
 }
-
-
-void Game::addMessage(std::string msg)
+/*
+Response Game::addFaction(const Request& req)
 {
 	std::lock_guard<std::mutex> lock(_mutex);
 
-	if(_lastMsgIndex + 1 < _maxMsgCount)
+	auto iter = _factions.find(id);
+	if(iter == _factions.end())
 	{
-		_lastMsgIndex++;
+		_factions.insert(std::make_pair(id, faction));
+		return true;
 	}
 	else
 	{
-		for(int i = 1; i < _maxMsgCount; ++i)
-		{
-			_messages[i - 1] = _messages[i];
-		}
+		return false;
 	}
-
-	_messages[_lastMsgIndex] = msg;
 }
 
-std::string Game::getLatestMessage() const
-{
-	std::lock_guard<std::mutex> lock(_mutex);
-	return _messages[_lastMsgIndex];
-}
-
-std::vector<std::string> Game::getMessageBoardContent() const
-{
-	std::lock_guard<std::mutex> lock(_mutex);
-
-	return _messages;
-}
+void Game::parseReqCredentials()
+*/

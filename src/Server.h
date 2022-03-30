@@ -40,5 +40,5 @@ private:
 	
 	size_t findContentLength(const PK_byte* data, size_t dataLen) const;
 
-	Request convertToReq(PK_byte* data, size_t dataLen, size_t bodyLen, int clientSD);
+	//Request convertToReq(PK_byte* data, size_t dataLen, size_t bodyLen, int clientSD);
 };

@@ -70,7 +70,7 @@ void RequestHandler::run()
 				// Return only the latest message
 				std::string message = _gameRef.getLatestMessage();
 				Response response(message.data(), message.size());
-				_serverRef.respond(sd, response.getData(), response.getSize());
+				send(sd, response.getData(), response.getSize(), 0);
 				
 				
 			}
@@ -84,8 +84,9 @@ void RequestHandler::run()
 				_gameRef.addMessage(message);
 
 				Response response(nullptr, 0);
-				_serverRef.respond(sd, response.getData(), response.getSize());
+				send(sd, response.getData(), response.getSize(), 0);
 			}
+			close(sd);
 		}
 	}
 }

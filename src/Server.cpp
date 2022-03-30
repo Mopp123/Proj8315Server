@@ -67,124 +67,43 @@ void Server::beginReqHandler()
 }
 
 
+
 void Server::run()
 {
-	// Clear existing state of our fd_set
-	FD_ZERO(&_readfds);
-	FD_SET(_serverSD, &_readfds);
-	_maxSD = _serverSD;
-
-	// Update fd_set to match our "connected clients"
-	for(auto client : _clientSDs)
-	{
-		int clientSD = client.second;
-		if(clientSD > 0)
-		{
-			FD_SET(clientSD, &_readfds);
-			_maxSD = clientSD > _maxSD ? clientSD : _maxSD;
-		}
-	}
-
-	// Wait for activity in one of our sockets..
-	int activity = select(_maxSD + 1, &_readfds, NULL, NULL, NULL);
-
-	if(activity < 0)
-	{
-		Debug::log("Error on select-func");
-	}
-	
 	
 	sockaddr_in clientAddress;	
 	memset(&clientAddress, 0, sizeof(clientAddress));
 	socklen_t clientLen = sizeof(clientAddress);
 	
-	// Check if something happened to our "server socket descriptor"
-	// 	-> That indicates we have new client attempting to connect...
-	if(FD_ISSET(_serverSD, &_readfds))
+	int connSD = accept(_serverSD, (struct sockaddr*)&clientAddress, &clientLen);
+	
+	if(connSD > 0)
 	{
-
-		int newSocket = accept(_serverSD, (struct sockaddr*)&clientAddress, &clientLen);
+		// Get details of conn..
+		getpeername(connSD, (struct sockaddr*)&clientAddress, &clientLen);
+		//char* clientAddrName = inet_ntoa(clientAddress.sin_addr);
+		//unsigned short clientPort = ntohs(clientAddress.sin_port);
 		
-
-		if(newSocket < 0)
+		size_t readBytes = read(connSD, _pRecvBuf, _maxRecvBufLen);
+		if(readBytes > 0)
 		{
-			Debug::log("Failed to accept connection");
+			// JUST TESTING ATM!!!
+			
+			size_t bodySize = findContentLength(_pRecvBuf, readBytes);
+			Request req = convertToReq(_pRecvBuf, readBytes, bodySize, connSD);
+
+			//Debug::log("Parsed body size was: " + std::to_string(bodySize));
+			_reqHandler.addToReqQueue(req);
+
+			// resert recv buf for next upcomming reqs
+			memset(_pRecvBuf, 0, _maxRecvBufLen);
 		}
 		else
 		{
-
-			// Get details of conn..
-			getpeername(newSocket, (struct sockaddr*)&clientAddress, &clientLen);
-			char* clientAddrName = inet_ntoa(clientAddress.sin_addr);
-			std::string clientAddr_str(clientAddrName);
-			auto iter = _clientSDs.find(clientAddr_str);
-			if(iter != _clientSDs.end())
-			{
-				_clientSDs[std::string(clientAddrName)] = newSocket;
-			}
-			else if(_clientSDs.size() < _maxClientCount)
-			{
-				Debug::log("new client connected(" + clientAddr_str + ")");
-				_clientSDs.insert(std::make_pair(clientAddr_str, newSocket));
-			}
-			else
-			{
-
-				close(newSocket);
-			}
-
-			/*
-			if(_clientSDs.find(newSocket) == _clientSDs.end())
-			{
-			std::string responseData =
-                                "HTTP/1.1 200 OK\n"
-                                "Content-Type: application/octet-stream\n"
-                                "Content-Length: 0\n"
-                                "Access-Control-Allow-Origin: *\n"
-                                "\n";
-
-                                int sentBytes = send(newSocket, responseData.data(), responseData.size(), 0);
-                                if(sentBytes != (int)responseData.size())
-                                {
-                                        std::cout << "Error on welcome send\n";
-                                }
-                                // Add this new connection to our connections list
-				//_clientSDs.push_back(newSocket);
-				_clientSDs[newSocket] = 1;
-				Debug::log("Connection accepted (sd: " + std::to_string(newSocket) + ")");
-			}*/
+			Debug::log("Error on reading");
+			close(connSD);
 		}
 	}
-
-	// Check activity on "already connected sockets"
-	for(auto client : _clientSDs)
-	{
-		int sd = client.second;
-
-		if(FD_ISSET(sd, &_readfds))
-		{
-			int readVal = read(sd, _pRecvBuf, _maxRecvBufLen);
-			if(readVal > 0)
-			{
-				
-				// JUST TESTING ATM!!!
-				
-				size_t bodySize = findContentLength(_pRecvBuf, readVal);
-				Request req = convertToReq(_pRecvBuf, readVal, bodySize, sd);
-
-				//Debug::log("Parsed body size was: " + std::to_string(bodySize));
-				_reqHandler.addToReqQueue(req);
-			}
-		}
-		memset(_pRecvBuf, 0, _maxRecvBufLen);
-	}
-
-}
-
-
-void Server::respond(int clientSD, const PK_byte* data, size_t size)
-{
-	send(clientSD, (void*)data, size, 0);
 }
 
 

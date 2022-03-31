@@ -21,6 +21,8 @@ Response Game::addFaction(const std::string& userID, const std::string& factionN
 {
 	std::lock_guard<std::mutex> lock(_mutex);
 	std::string responseMessage;
+	
+	Debug::log("Attempting to create faction: " + factionName + "(strlen: " + std::to_string(factionName.size()) + ")");
 
 	auto iter = _factions.find(userID);
 	if(iter == _factions.end())

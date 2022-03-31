@@ -8,6 +8,8 @@
 
 #include "Responses.h"
 
+#include "Common.h"
+
 /*
  
 Every command has
@@ -18,16 +20,18 @@ Every command has
 
 */
 
-#define CMD_MIN_LEN 36
+#define CMD_MIN_LEN (USER_ID_LEN + sizeof(int32_t))
+#define CMD_MAX_ARG_BUF_LEN 64
+
 
 class Command
 {
 private:
 
-	char _userID[32];
+	char _userID[USER_ID_LEN];
 	int32_t _funcName = 0;
-	std::vector<std::string> _args;
-
+	PK_byte _argBuf[CMD_MAX_ARG_BUF_LEN];
+	size_t _argBufSize;
 public:
 	
 	Command(char* raw, size_t size);
@@ -35,14 +39,15 @@ public:
 	
 	inline const char* getRequester() const { return _userID; } 
 	inline int32_t getName() const { return _funcName; }
-	inline const std::vector<std::string> getArgs() const { return _args; }
+	inline const char* getArgs() const { return _argBuf; }
+	inline size_t getArgBufSize() const { return _argBufSize; }
 };
 
 class CMDHandler
 {
 private:
 
-	std::unordered_map<int32_t, Response(*)(const char* requester, const std::vector<std::string>&)> _funcMapping;
+	std::unordered_map<int32_t, Response(*)(const Command&)> _funcMapping;
 
 public:
 	

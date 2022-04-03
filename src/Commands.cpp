@@ -11,6 +11,7 @@
 
 #include "cmds/CommandNames.h"
 #include "cmds/General.h"
+#include "cmds/WorldState.h"
 
 Command::Command(char* raw, size_t size)
 {
@@ -46,6 +47,7 @@ CMDHandler::CMDHandler()
 {
 	_funcMapping.insert(std::make_pair(CMD_CreateFaction, cmds::cmd_createNewFaction));
 	_funcMapping.insert(std::make_pair(CMD_FetchServerMessage, cmds::cmd_fetchServerMessage));
+	_funcMapping.insert(std::make_pair(CMD_FetchWorldState, cmds::cmd_fetchWorldState));
 }
 
 Response CMDHandler::processCommand(const Command& cmd)

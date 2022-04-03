@@ -61,10 +61,10 @@ namespace world
 	};
 	
 	
-	void set_tile_uid(void* tile, uint32_t uid);
-	void set_tile_geoinfo(void* tile, PK_byte value);
+	void set_tile_uid(uint64_t& tile, uint32_t uid);
+	void set_tile_geoinfo(uint64_t& tile, PK_byte value);
 
-	uint32_t get_tile_uid(void* tile);
+	uint32_t get_tile_uid(uint64_t tile);
 }
 
 

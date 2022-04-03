@@ -19,114 +19,23 @@
 #include <iostream>
 #include <string>
 
-// Outputs either 0 or 1 to "outBit", depending on is bit set in "val" at "pos"
-template<typename T>
-void get_bit(const T& val, int pos, PK_byte& outBit)
-{
-	outBit = (val >> pos) & 0x1;
-}
+#include "BitShit.hpp"
 
-// Sets bit at "target" in "target" to bit
-void set_bit(uint64_t& target, int pos, PK_byte bit)
-{
-	int mask = 1 << pos;
-	target = ((target & ~mask) | bit << pos);
-}
+#include "game/world/Tile.h"
 
-// Sets area in "target" to match bits in "toSet" starting from "startPos"
-// *Currently bit count has to match that inputted "toSet" bitcount..
-void set_area(uint64_t& target, uint32_t toSet, int startPos, int bitCount)
-{
-	for(int j = 0; j < bitCount; ++j)
-	{
-		uint64_t i = j + startPos;
-		
-		PK_byte bit = 0;
-		get_bit<uint32_t>(toSet, j, bit);
-		
-		uint64_t bit64 = (uint64_t)bit;
-		uint64_t mask = (uint64_t)1 << i;
-		target = ((target & ~mask) | bit64 << i);
-	}
-}
-
-
-
-void convert_area(const uint64_t& inValue, uint32_t& outValue, int pos, int count)
-{
-	for(int i = 0; i < count; ++i)
-	{
-		int j = pos + i;
-		//int mask = 1 << i;
-
-		// Returns, is bit at pos "i" set in value "val"
-		PK_byte bit = (inValue >> j) & 0x1;
-		
-		
-		outValue = ((outValue & ~(1 << i)) | bit << i);
-
-		//set_bit(&outValue, i, bit);
-
-
-
-	}
-}
-
-
-void display_bits(uint64_t val)
-{
-	for(int i = 63; i >= 0; --i)
-	{
-		PK_byte bit = 0;
-		get_bit<uint64_t>(val, i, bit);
-		std::cout << std::to_string(bit);
-	}
-	std::cout << "\n\n";
-}
-
-
-void display_bits(uint32_t val)
-{
-	for(int i = 31; i >= 0; --i)
-	{
-		PK_byte bit = 0;
-		get_bit<uint32_t>(val, i, bit);
-		std::cout << std::to_string(bit);
-	}
-	std::cout << "\n\n";
-}
 
 int main(const int argc, const char** argv)
 {
-	
-	uint64_t val = 0;
-	/*
-	set_bit(&val, 0, 1);
-	set_bit(&val, 1, 0);
-	set_bit(&val, 2, 1);
-	set_bit(&val, 3, 1);
-	set_bit(&val, 4, 0);
+	/*uint64_t tileState = 0;
+	uint32_t uid = 147126;
+
+	world::Tile tile{tileState};
+
+	world::set_tile_uid(tile.state, uid);
+
+	Debug::log("uid: " + std::to_string(world::get_tile_uid(tile.state)));
 	*/
-	uint32_t toSet = 420;
-	set_area(val, toSet, 0, 32);
-
-	uint32_t toSet2 = 123;
-	set_area(val, toSet2, 32, 32);
 	
-	
-	uint32_t test = 0;
-	convert_area(val, test, 0, 32);
-
-	Debug::log("full: ");
-	display_bits(val);
-
-	Debug::log("test: ");
-	display_bits(test);
-
-	Debug::log("Full value: " + std::to_string(val) + " 	Test was: " + std::to_string(test));
-
-
-	/*
 
 	Server server(51421, 1024);
 
@@ -136,7 +45,7 @@ int main(const int argc, const char** argv)
 	{
 		server.run();
 	}
-*/
+
 	return 0;
 }
 

@@ -71,6 +71,8 @@ void Server::beginReqHandler()
 
 void Server::run()
 {
+	// JUST TESTING!!!
+	_game.update();
 	
 	sockaddr_in clientAddress;	
 	memset(&clientAddress, 0, sizeof(clientAddress));

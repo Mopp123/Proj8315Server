@@ -25,14 +25,17 @@ private:
 
 	static Game* s_pInstance;
 
+
+
 public:
 
 	Game();
 	Game(const Game&) = delete;
 	~Game();
+	
+	void update();
 
 	Response addFaction(const std::string& userID, const std::string& factionName);
-	
 	Response getWorldState(int xPos, int zPos);
 
 	static Game* get();

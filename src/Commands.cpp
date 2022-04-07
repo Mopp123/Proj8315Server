@@ -21,11 +21,7 @@ Command::Command(char* raw, size_t size)
 	{
 		memcpy(_userID, raw, USER_ID_LEN);
 		memcpy(&_funcName, raw + USER_ID_LEN, sizeof(int32_t));
-
-		Debug::log("Attempting to parse arg");
-
 		_argBufSize = size - CMD_MIN_LEN;
-		Debug::log("arg buf size was: " + std::to_string(_argBufSize));
 		if(_argBufSize > 0)
 			memcpy(_argBuf, raw + CMD_MIN_LEN, _argBufSize);
 	}
@@ -54,7 +50,7 @@ Response CMDHandler::processCommand(const Command& cmd)
 {
 	std::string userID(cmd.getRequester(), 32);
 	int32_t funcName = cmd.getName();
-	Debug::log("Attempting to process cmd (requester: " + userID + " funcName: " + std::to_string(funcName));
+	//Debug::log("Attempting to process cmd (requester: " + userID + " funcName: " + std::to_string(funcName));
 
 	auto iter = _funcMapping.find(cmd.getName());
 	if(iter != _funcMapping.end())

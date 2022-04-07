@@ -25,16 +25,37 @@ Game::Game()
 	world::set_tile_uid(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 4);
 
 	// Test setting some geoInfo
-	world::set_tile_terrinfo(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 3);
-	world::set_tile_terrinfo(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[1 + 2 * GAME_WORLD_WIDTH], 2);
-	world::set_tile_terrinfo(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 7);
+	world::set_tile_terrinfo(_pWorld[0 + 0 * GAME_WORLD_WIDTH], 3);
+	world::set_tile_terrinfo(_pWorld[1 + 0 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[2 + 0 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[3 + 0 * GAME_WORLD_WIDTH], 5);
+	
+	world::set_tile_terrinfo(_pWorld[3 + 1 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[3 + 3 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 5);
+	
+	world::set_tile_terrinfo(_pWorld[0 + 4 * GAME_WORLD_WIDTH], 3);
+	world::set_tile_terrinfo(_pWorld[1 + 4 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[2 + 4 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 5);
 }
 
 Game::~Game()
 {
 
 	delete[] _pWorld;
+}
+
+
+float s_TEST_anim = 0.0f;
+void Game::update()
+{
+	std::lock_guard<std::mutex> lock(_mutex_worldState);
+	world::set_tile_terrinfo(_pWorld[0 + 4 * GAME_WORLD_WIDTH], (PK_ubyte)(s_TEST_anim));
+	s_TEST_anim += 0.25f;
+	if(s_TEST_anim>=30.0f)
+		s_TEST_anim = 0.0f;
 }
 
 Response Game::addFaction(const std::string& userID, const std::string& factionName)
@@ -69,6 +90,8 @@ Response Game::getWorldState(int xPos, int zPos)
 	size_t bufSize = (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
 	
 	PK_byte* buffer = new PK_byte[bufSize];
+	memset(buffer, 0, bufSize);
+
 	size_t bufPos = 0;
 	
 	for(int z = zPos - observeRadius; z <= zPos + observeRadius; ++z)

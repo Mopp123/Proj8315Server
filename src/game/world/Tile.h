@@ -10,8 +10,7 @@
 #define TILE_STATE_SIZE_uid		32
 #define TILE_STATE_SIZE_properties	32
 
-#define TILE_STATE_SIZE_geoInfo		5
-#define TILE_STATE_SIZE_effect		2
+#define TILE_STATE_SIZE_terrInfo	7
 #define TILE_STATE_SIZE_thingCategory	3
 #define TILE_STATE_SIZE_thingID		8
 #define TILE_STATE_SIZE_action		3
@@ -22,8 +21,7 @@
 // Bit positions in the "state"
 #define TILE_STATE_POS_properties	32
 
-#define TILE_STATE_POS_geoInfo		0
-#define TILE_STATE_POS_effect		5
+#define TILE_STATE_POS_terrInfo		0
 #define TILE_STATE_POS_thingCategory	7
 #define TILE_STATE_POS_thingID		10
 #define TILE_STATE_POS_action		18
@@ -32,14 +30,6 @@
 
 namespace world
 {
-	enum TileStateEffect
-	{
-		TILE_STATE_effectNone = 	0,
-		TILE_STATE_effectFire = 	1,
-		TILE_STATE_effectPoison = 	2,
-		TILE_STATE_effectPENDING = 	3 // Not decided yet, what this last usable val would be?
-	};
-	
 	enum TileStateAction
 	{
 		TILE_STATE_actionIdle = 	0,
@@ -61,10 +51,22 @@ namespace world
 	};
 	
 	
-	void set_tile_uid(uint64_t& tile, uint32_t uid);
-	void set_tile_geoinfo(uint64_t& tile, PK_byte value);
+	void set_tile_uid		(uint64_t& tile, uint32_t uid);
+	void set_tile_terrinfo		(uint64_t& tile, PK_ubyte value);
+	void set_tile_thingcategory	(uint64_t& tile, PK_ubyte value);
+	void set_tile_thingid		(uint64_t& tile, PK_ubyte value);
+	void set_tile_action		(uint64_t& tile, PK_ubyte value);
+	void set_tile_facingdir		(uint64_t& tile, PK_ubyte value);
+	void set_tile_customvar		(uint64_t& tile, PK_ubyte value);
 
-	uint32_t get_tile_uid(uint64_t tile);
+
+	uint32_t get_tile_uid		(uint64_t tile);
+	PK_ubyte get_tile_terrinfo	(uint64_t tile);
+	PK_ubyte get_tile_thingcategory	(uint64_t tile);
+	PK_ubyte get_tile_thingid	(uint64_t tile);
+	PK_ubyte get_tile_action	(uint64_t tile);
+	PK_ubyte get_tile_facingdir	(uint64_t tile);
+	PK_ubyte get_tile_customvar	(uint64_t tile);
 }
 
 

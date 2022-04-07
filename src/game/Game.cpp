@@ -23,6 +23,12 @@ Game::Game()
 	world::set_tile_uid(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 2);
 	world::set_tile_uid(_pWorld[1 + 2 * GAME_WORLD_WIDTH], 3);
 	world::set_tile_uid(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 4);
+
+	// Test setting some geoInfo
+	world::set_tile_terrinfo(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 3);
+	world::set_tile_terrinfo(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrinfo(_pWorld[1 + 2 * GAME_WORLD_WIDTH], 2);
+	world::set_tile_terrinfo(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 7);
 }
 
 Game::~Game()

@@ -36,7 +36,7 @@ public:
 	void update();
 
 	Response addFaction(const std::string& userID, const std::string& factionName);
-	Response getWorldState(int xPos, int zPos);
+	Response getWorldState(int xPos, int zPos, int observeRadius);
 
 	static Game* get();
 

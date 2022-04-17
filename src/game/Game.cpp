@@ -25,20 +25,37 @@ Game::Game()
 	world::set_tile_uid(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 4);
 
 	// Test setting some geoInfo
-	world::set_tile_terrinfo(_pWorld[0 + 0 * GAME_WORLD_WIDTH], 3);
-	world::set_tile_terrinfo(_pWorld[1 + 0 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[2 + 0 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[3 + 0 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrelevation(_pWorld[0 + 0 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[1 + 0 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[2 + 0 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[3 + 0 * GAME_WORLD_WIDTH], 1);
 	
-	world::set_tile_terrinfo(_pWorld[3 + 1 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[3 + 3 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrelevation(_pWorld[3 + 1 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[3 + 3 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
 	
-	world::set_tile_terrinfo(_pWorld[0 + 4 * GAME_WORLD_WIDTH], 3);
-	world::set_tile_terrinfo(_pWorld[1 + 4 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[2 + 4 * GAME_WORLD_WIDTH], 5);
-	world::set_tile_terrinfo(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 5);
+	world::set_tile_terrelevation(_pWorld[0 + 4 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[1 + 4 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[2 + 4 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
+	
+
+	// also set these tiles to some other than water type
+	world::set_tile_terrtype(_pWorld[0 + 0 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[1 + 0 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[2 + 0 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[3 + 0 * GAME_WORLD_WIDTH], 1);
+	
+	world::set_tile_terrtype(_pWorld[3 + 1 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[3 + 3 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
+	
+	world::set_tile_terrtype(_pWorld[0 + 4 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[1 + 4 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[2 + 4 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
 }
 
 Game::~Game()
@@ -48,14 +65,15 @@ Game::~Game()
 }
 
 
-float s_TEST_anim = 0.0f;
 void Game::update()
 {
+	/*
 	std::lock_guard<std::mutex> lock(_mutex_worldState);
-	world::set_tile_terrinfo(_pWorld[0 + 4 * GAME_WORLD_WIDTH], (PK_ubyte)(s_TEST_anim));
+	world::set_tile_terrinfo(_pWorld[0 + 0 * GAME_WORLD_WIDTH], (PK_ubyte)(s_TEST_anim));
 	s_TEST_anim += 0.25f;
 	if(s_TEST_anim>=30.0f)
 		s_TEST_anim = 0.0f;
+		*/
 }
 
 Response Game::addFaction(const std::string& userID, const std::string& factionName)
@@ -83,9 +101,8 @@ Response Game::addFaction(const std::string& userID, const std::string& factionN
 }
 
 
-Response Game::getWorldState(int xPos, int zPos)
+Response Game::getWorldState(int xPos, int zPos, int observeRadius)
 {
-	const int observeRadius = 5;
 	const int observeRectWidth = (observeRadius * 2) + 1;
 	size_t bufSize = (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
 	

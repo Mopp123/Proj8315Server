@@ -6,41 +6,26 @@
 
 namespace world
 {
-	/*
-	void set_tile_uid(uint64_t& tile, uint32_t uid)
-	{
-		memcpy(&tile, &uid, sizeof(uint32_t));
-	}
-
-	
-	void set_tile_geoinfo(uint64_t& tile, PK_ubyte value)
-	{
-		bitshit::set_area<uint64_t, PK_ubyte>(
-				tile, value,
-				TILE_STATE_POS_properties + TILE_STATE_POS_geoInfo,
-				TILE_STATE_SIZE_geoInfo
-				);
-	}
-	
-	uint32_t get_tile_uid(uint64_t tile)
-	{
-		return (uint32_t)tile;
-	}*/
-
-
 	void set_tile_uid(uint64_t& tile, uint32_t uid) 
 	{
 
 		memcpy(&tile, &uid, sizeof(uint32_t));
 	}
 
-        void set_tile_terrinfo(uint64_t& tile, PK_ubyte value) 
+        void set_tile_terrelevation(uint64_t& tile, PK_ubyte value) 
 	{
-
 		bitshit::set_area<uint64_t, PK_ubyte>(
 			tile, value,
-			TILE_STATE_POS_properties + TILE_STATE_POS_terrInfo,
-			TILE_STATE_SIZE_terrInfo
+			TILE_STATE_POS_properties + TILE_STATE_POS_terrElevation,
+			TILE_STATE_SIZE_terrElevation
+		);
+	}
+        void set_tile_terrtype(uint64_t& tile, PK_ubyte value) 
+	{
+		bitshit::set_area<uint64_t, PK_ubyte>(
+			tile, value,
+			TILE_STATE_POS_properties + TILE_STATE_POS_terrType,
+			TILE_STATE_SIZE_terrType
 		);
 	}
         void set_tile_thingcategory(uint64_t& tile, PK_ubyte value) 
@@ -89,13 +74,23 @@ namespace world
 	{
 		return (uint32_t)tile; // Should work since first 32 bits are uid?
 	}
-        PK_ubyte get_tile_terrinfo(uint64_t tile) 
+        PK_ubyte get_tile_terrelevation(uint64_t tile) 
 	{
 		PK_ubyte output = 0;
 		bitshit::convert_area<uint64_t, PK_ubyte>(
 			tile, output, 
-			TILE_STATE_POS_properties + TILE_STATE_POS_terrInfo,
-			TILE_STATE_SIZE_terrInfo
+			TILE_STATE_POS_properties + TILE_STATE_POS_terrElevation,
+			TILE_STATE_SIZE_terrElevation
+		);
+		return output;
+	}
+        PK_ubyte get_tile_terrtype(uint64_t tile) 
+	{
+		PK_ubyte output = 0;
+		bitshit::convert_area<uint64_t, PK_ubyte>(
+			tile, output, 
+			TILE_STATE_POS_properties + TILE_STATE_POS_terrType,
+			TILE_STATE_SIZE_terrType
 		);
 		return output;
 	}

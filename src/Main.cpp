@@ -26,21 +26,11 @@
 
 int main(const int argc, const char** argv)
 {
-	/*uint64_t tileState = 0;
-	uint32_t uid = 147126;
-
-	world::Tile tile{tileState};
-
-	world::set_tile_uid(tile.state, uid);
-
-	Debug::log("uid: " + std::to_string(world::get_tile_uid(tile.state)));
-	*/
-	
-
 	Server server(51421, 1024);
 
 	server.beginReqHandler();
-	
+	server.beginGame();
+
 	while(true)
 	{
 		server.run();

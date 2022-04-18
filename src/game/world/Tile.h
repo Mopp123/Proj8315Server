@@ -30,6 +30,9 @@
 #define TILE_STATE_POS_dir		21
 #define TILE_STATE_POS_customVar	24
 
+// Max values of specific properties
+#define TILE_STATE_MAX_terrElevation 7
+
 namespace world
 {
 	enum TileStateTerrElevation
@@ -46,11 +49,12 @@ namespace world
 
 	enum TileStateTerrType
 	{
-		TILE_STATE_terrTypeCommonWater = 	0,
-		TILE_STATE_terrTypeCommonDeadland = 	1,
+		TILE_STATE_terrTypeCommonDeadland = 	0,
+		TILE_STATE_terrTypeCommonVulcanic = 	1,
 		TILE_STATE_terrTypeCommonWasteland = 	2,
-		TILE_STATE_terrTypeCommonRocky = 	3,
-		TILE_STATE_terrTypeCommonSnow = 	4,
+		TILE_STATE_terrTypeCommonWater = 	3,
+		TILE_STATE_terrTypeCommonRocky = 	4,
+		TILE_STATE_terrTypeCommonSnow = 	5
 	};
 
 	enum TileStateAction
@@ -65,6 +69,18 @@ namespace world
 		TILE_STATE_actionPENDING2 = 5,
 		TILE_STATE_actionPENDING3 = 6,
 		TILE_STATE_actionPENDING4 = 7,
+	};
+
+	enum TileStateDirection
+	{
+		TILE_STATE_dirN = 	0,
+		TILE_STATE_dirNE = 	1,
+		TILE_STATE_dirE = 	2,
+		TILE_STATE_dirSE = 	3,
+		TILE_STATE_dirS = 	4,
+		TILE_STATE_dirSW = 	5,
+		TILE_STATE_dirW = 	6,
+		TILE_STATE_dirNW = 	7
 	};
 
 	struct Tile

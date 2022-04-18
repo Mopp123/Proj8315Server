@@ -4,6 +4,7 @@
 #include <cstring>
 #include <mutex>
 
+#include "game/stateUpdates/GeoUpdater.h"
 #include "world/Tile.h"
 #include "Debug.h"
 #include <iostream>
@@ -18,55 +19,24 @@ Game::Game()
 	_pWorld = new uint64_t[GAME_WORLD_WIDTH * GAME_WORLD_WIDTH];
 	memset((void*)_pWorld, 0, sizeof(uint64_t) * GAME_WORLD_WIDTH * GAME_WORLD_WIDTH);
 
-	// Test setting some state into some tiles..
-	world::set_tile_uid(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_uid(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 2);
-	world::set_tile_uid(_pWorld[1 + 2 * GAME_WORLD_WIDTH], 3);
-	world::set_tile_uid(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 4);
 
-	// Test setting some geoInfo
-	world::set_tile_terrelevation(_pWorld[0 + 0 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[1 + 0 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[2 + 0 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[3 + 0 * GAME_WORLD_WIDTH], 1);
-	
-	world::set_tile_terrelevation(_pWorld[3 + 1 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[3 + 3 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
-	
-	world::set_tile_terrelevation(_pWorld[0 + 4 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[1 + 4 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[2 + 4 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
-	
-
-	// also set these tiles to some other than water type
-	world::set_tile_terrtype(_pWorld[0 + 0 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[1 + 0 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[2 + 0 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[3 + 0 * GAME_WORLD_WIDTH], 1);
-	
-	world::set_tile_terrtype(_pWorld[3 + 1 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[3 + 2 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[3 + 3 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
-	
-	world::set_tile_terrtype(_pWorld[0 + 4 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[1 + 4 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[2 + 4 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[3 + 4 * GAME_WORLD_WIDTH], 1);
+	// Create world state updaters...
+	_pGeoUpdater = new world::GeoUpdater(*this, 0.01f);
 }
 
 Game::~Game()
 {
-
+	delete _pGeoUpdater;
 	delete[] _pWorld;
 }
 
 
-void Game::update()
+void Game::run()
 {
+	while(_run)
+	{
+		_pGeoUpdater->update();
+	}
 	/*
 	std::lock_guard<std::mutex> lock(_mutex_worldState);
 	world::set_tile_terrinfo(_pWorld[0 + 0 * GAME_WORLD_WIDTH], (PK_ubyte)(s_TEST_anim));
@@ -133,6 +103,44 @@ Response Game::getWorldState(int xPos, int zPos, int observeRadius)
 	Response response(buffer, bufSize);
 	delete[] buffer;
 	return response;
+}
+
+uint64_t Game::getTileState(int xPos, int zPos)
+{
+	if(validCoords(xPos, zPos))
+	{
+		// Not sure is this kind of "just observing" requiring locking...
+		std::lock_guard<std::mutex> lock(_mutex_worldState);
+		return _pWorld[xPos + zPos * GAME_WORLD_WIDTH];
+	}
+	return 0;
+}
+uint64_t Game::getTileState(int index)
+{
+	if(index >= 0 && index < GAME_WORLD_WIDTH * GAME_WORLD_WIDTH)
+	{
+		// Not sure is this kind of "just observing" requiring locking...
+		std::lock_guard<std::mutex> lock(_mutex_worldState);
+		return _pWorld[index];
+	}
+	return 0;
+}
+
+void Game::setTileState(int xPos, int zPos, uint64_t newState)
+{
+	if(validCoords(xPos, zPos))
+	{
+		std::lock_guard<std::mutex> lock(_mutex_worldState);
+		_pWorld[xPos + zPos * GAME_WORLD_WIDTH] = newState;
+	}	
+}
+void Game::setTileState(int index, uint64_t newState)
+{
+	if(index >= 0 && index < GAME_WORLD_WIDTH * GAME_WORLD_WIDTH)
+	{
+		std::lock_guard<std::mutex> lock(_mutex_worldState);
+		_pWorld[index] = newState;
+	}	
 }
 
 Game* Game::get()

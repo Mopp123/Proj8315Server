@@ -54,6 +54,12 @@ Server::~Server()
 		delete _reqHandlerThread;
 	}
 
+	if(_gameThread)
+	{
+		_gameThread->join();
+		delete _gameThread;
+	}
+
 	close(_serverSD);
 }
 
@@ -66,14 +72,18 @@ void Server::beginReqHandler()
 	else
 		Debug::log("Attempted to launch RequestHandler multiple times!");
 }
+void Server::beginGame()
+{
+	if(!_gameThread)
+		_gameThread = new std::thread(&Game::run, &_game);
+	else
+		Debug::log("Attempted to launch Game multiple times!");
+}
 
 
 
 void Server::run()
 {
-	// JUST TESTING!!!
-	_game.update();
-	
 	sockaddr_in clientAddress;	
 	memset(&clientAddress, 0, sizeof(clientAddress));
 	socklen_t clientLen = sizeof(clientAddress);

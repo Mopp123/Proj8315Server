@@ -25,14 +25,14 @@ private:
 	Game _game;
 	RequestHandler _reqHandler;
 	std::thread* _reqHandlerThread = nullptr;
-
+	std::thread* _gameThread = nullptr;
 public:
 
 	Server(int port, size_t maxClientCount);
 	~Server();
 
 	void beginReqHandler();
-
+	void beginGame();
 	void run();
 	
 

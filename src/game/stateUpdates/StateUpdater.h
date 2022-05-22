@@ -12,7 +12,6 @@ namespace world
 	protected:
 		Game& _gameRef;
 
-	private:
 		std::chrono::time_point<std::chrono::high_resolution_clock> _timePoint_lastUpdate;
 		float _updateCooldown = 1.0f;
 	

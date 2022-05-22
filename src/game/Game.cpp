@@ -3,11 +3,13 @@
 #include "RequestHandler.h"
 #include <cstring>
 #include <mutex>
+#include <unordered_set>
 
 #include "game/stateUpdates/GeoUpdater.h"
 #include "world/Tile.h"
 #include "Debug.h"
-#include <iostream>
+
+#include <chrono>
 
 Game* Game::s_pInstance = nullptr;
 
@@ -19,9 +21,10 @@ Game::Game()
 	_pWorld = new uint64_t[GAME_WORLD_WIDTH * GAME_WORLD_WIDTH];
 	memset((void*)_pWorld, 0, sizeof(uint64_t) * GAME_WORLD_WIDTH * GAME_WORLD_WIDTH);
 
-
-	// Create world state updaters...
-	_pGeoUpdater = new world::GeoUpdater(*this, 0.01f);
+	world::set_tile_terrtype(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrtype(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 1);
+	world::set_tile_terrelevation(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 3);
+	world::set_tile_terrelevation(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 3);
 }
 
 Game::~Game()
@@ -35,15 +38,17 @@ void Game::run()
 {
 	while(_run)
 	{
-		_pGeoUpdater->update();
+		//std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
+		
+		//_pGeoUpdater->update();
+		//_pWeatherUpdater->update();
+
+
+		/*std::chrono::time_point<std::chrono::high_resolution_clock> endTime = std::chrono::high_resolution_clock::now();
+
+		std::chrono::duration<float> delta = endTime - startTime ;
+		Debug::log("Game update took: " + std::to_string(delta.count()));*/
 	}
-	/*
-	std::lock_guard<std::mutex> lock(_mutex_worldState);
-	world::set_tile_terrinfo(_pWorld[0 + 0 * GAME_WORLD_WIDTH], (PK_ubyte)(s_TEST_anim));
-	s_TEST_anim += 0.25f;
-	if(s_TEST_anim>=30.0f)
-		s_TEST_anim = 0.0f;
-		*/
 }
 
 Response Game::addFaction(const std::string& userID, const std::string& factionName)

@@ -10,8 +10,9 @@
 #define TILE_STATE_SIZE_uid		32
 #define TILE_STATE_SIZE_properties	32
 
-#define TILE_STATE_SIZE_terrElevation	3
-#define TILE_STATE_SIZE_terrType	4
+#define TILE_STATE_SIZE_terrElevation	4
+#define TILE_STATE_SIZE_terrType	3
+#define TILE_STATE_SIZE_terrEffect	4
 #define TILE_STATE_SIZE_thingCategory	3
 #define TILE_STATE_SIZE_thingID		8
 #define TILE_STATE_SIZE_action		3
@@ -23,12 +24,13 @@
 #define TILE_STATE_POS_properties	32
 
 #define TILE_STATE_POS_terrElevation	0
-#define TILE_STATE_POS_terrType		3
-#define TILE_STATE_POS_thingCategory	7
-#define TILE_STATE_POS_thingID		10
-#define TILE_STATE_POS_action		18
-#define TILE_STATE_POS_dir		21
-#define TILE_STATE_POS_customVar	24
+#define TILE_STATE_POS_terrType		4
+#define TILE_STATE_POS_terrEffect	7
+#define TILE_STATE_POS_thingCategory	11
+#define TILE_STATE_POS_thingID		14
+#define TILE_STATE_POS_action		22
+#define TILE_STATE_POS_dir		25
+#define TILE_STATE_POS_customVar	28
 
 // Max values of specific properties
 #define TILE_STATE_MAX_terrElevation 7
@@ -46,15 +48,9 @@ namespace world
 		TILE_STATE_terrElevHighMountains = 	6
 	};
 
-
-	enum TileStateTerrType
+	enum TileStateTerrEffectFlags
 	{
-		TILE_STATE_terrTypeCommonDeadland = 	0,
-		TILE_STATE_terrTypeCommonVulcanic = 	1,
-		TILE_STATE_terrTypeCommonWasteland = 	2,
-		TILE_STATE_terrTypeCommonWater = 	3,
-		TILE_STATE_terrTypeCommonRocky = 	4,
-		TILE_STATE_terrTypeCommonSnow = 	5
+		TILE_STATE_terrEffectRain = 0x01
 	};
 
 	enum TileStateAction
@@ -93,6 +89,7 @@ namespace world
 	void set_tile_uid		(uint64_t& tile, uint32_t uid);
 	void set_tile_terrelevation	(uint64_t& tile, PK_ubyte value);
 	void set_tile_terrtype		(uint64_t& tile, PK_ubyte value);
+	void set_tile_terreffect	(uint64_t& tile, PK_ubyte value);
 	void set_tile_thingcategory	(uint64_t& tile, PK_ubyte value);
 	void set_tile_thingid		(uint64_t& tile, PK_ubyte value);
 	void set_tile_action		(uint64_t& tile, PK_ubyte value);
@@ -103,6 +100,7 @@ namespace world
 	uint32_t get_tile_uid		(uint64_t tile);
 	PK_ubyte get_tile_terrelevation	(uint64_t tile);
 	PK_ubyte get_tile_terrtype	(uint64_t tile);
+	PK_ubyte get_tile_terreffect	(uint64_t tile);
 	PK_ubyte get_tile_thingcategory	(uint64_t tile);
 	PK_ubyte get_tile_thingid	(uint64_t tile);
 	PK_ubyte get_tile_action	(uint64_t tile);

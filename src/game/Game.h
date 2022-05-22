@@ -10,6 +10,7 @@
 #include "Faction.h"
 
 #include "stateUpdates/GeoUpdater.h"
+#include "stateUpdates/WeatherUpdater.h"
 
 #define GAME_WORLD_WIDTH 2000
 
@@ -28,6 +29,7 @@ private:
 	static Game* s_pInstance;
 	
 	world::GeoUpdater* _pGeoUpdater = nullptr;
+	world::WeatherUpdater* _pWeatherUpdater = nullptr;
 	
 	bool _run = true;
 

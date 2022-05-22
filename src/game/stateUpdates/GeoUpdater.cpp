@@ -12,17 +12,22 @@ namespace world
 		StateUpdater(gameRef, updateCooldown)
 	{
 		// Just as test randomize some tectonic plate edges..
-		//_tectonicPlateEdges.push_back(5 + 5 * GAME_WORLD_WIDTH);
+		const int drawCount = 5;
+		const int fourthMapWidth = GAME_WORLD_WIDTH / 4;
+		for(int i = 0; i < drawCount; ++i)
+		{
+			int randX = (std::rand() % fourthMapWidth) + fourthMapWidth / 2;
+			int randY = (std::rand() % fourthMapWidth) + fourthMapWidth / 2;
+			int randDir = std::rand() % 8;
+			drawEdgeLine(randX, randY, (TileStateDirection)randDir, 12000);
+			Debug::log("Tectonic edge drawn");
+		}
 
-		// testing some tectonic plate edge drawing...
-		drawEdgeLine(5,1, TileStateDirection::TILE_STATE_dirS);
-		drawEdgeLine(1,30, TileStateDirection::TILE_STATE_dirE);
 
-		drawEdgeLine(35, 1, TileStateDirection::TILE_STATE_dirSE);
-		drawEdgeLine(56, 1, TileStateDirection::TILE_STATE_dirSW);
-		
-		drawEdgeLine(1, 62, TileStateDirection::TILE_STATE_dirNE);
-		
+		drawEdgeLine(1, 1, TileStateDirection::TILE_STATE_dirSE, 4000);
+		drawEdgeLine(10, 1, TileStateDirection::TILE_STATE_dirS, 8000);
+
+
 		Debug::log("GeoUpdater initialized");
 	}
 	
@@ -32,11 +37,16 @@ namespace world
 
         void GeoUpdater::updateFunc()
 	{
+		// This can be used to speed up the process..
+		const int geoUpdatesPerCycle = 20;
+		for(int i = 0; i < geoUpdatesPerCycle; ++i)
+		{
+
 		tryTriggerEdgeActive();
 		
 		// Try alter some vulcanicly active tile's elevation..
 		size_t vulcActiveLen = _vulcaniclyActive.size();
-		Debug::log("Vulcanicly active: " + std::to_string(vulcActiveLen));
+		//Debug::log("Vulcanicly active: " + std::to_string(vulcActiveLen));
 		if(vulcActiveLen > 0)
 		{
 			int randFromVulcList = std::rand() % (int)vulcActiveLen;
@@ -53,6 +63,7 @@ namespace world
 				}
 
 			}
+		}
 		}
 	}
 
@@ -86,26 +97,26 @@ namespace world
 
 	void GeoUpdater::alterElevation(int tileIndex, bool enableBleed)
 	{
+		/*
 
 		if(tileIndex < 0 || tileIndex >= GAME_WORLD_WIDTH * GAME_WORLD_WIDTH)
 			return;
 
-		//Debug::log("altering tile at: " + std::to_string(tileIndex));
 		
 		uint64_t tileState = _gameRef.getTileState(tileIndex);
-		PK_byte currentElevation = get_tile_terrelevation(tileState);
+		PK_ubyte currentElevation = get_tile_terrelevation(tileState);
 		if(currentElevation < TILE_STATE_MAX_terrElevation)
 		{
 
 			set_tile_terrelevation(tileState, currentElevation+1);
-			set_tile_terrtype(tileState, (PK_byte)TileStateTerrType::TILE_STATE_terrTypeCommonVulcanic);
+			set_tile_terrtype(tileState, (PK_ubyte)TileStateTerrType::TILE_STATE_terrTypeCommonVulcanic);
 			_gameRef.setTileState(tileIndex, tileState);
 
 			// Throw dice, do we set this back to non active
 			int diceThrow = std::rand() % TILE_STATE_MAX_terrElevation - currentElevation + 1;
 			if(diceThrow <= 0)
 			{
-				set_tile_terrtype(tileState, (PK_byte)TileStateTerrType::TILE_STATE_terrTypeCommonDeadland);
+				set_tile_terrtype(tileState, (PK_ubyte)TileStateTerrType::TILE_STATE_terrTypeCommonDeadland);
 				_gameRef.setTileState(tileIndex, tileState);
 				auto iter = std::find(_vulcaniclyActive.begin(), _vulcaniclyActive.end(), tileIndex);
 				if(iter != _vulcaniclyActive.end())
@@ -122,7 +133,7 @@ namespace world
 				// *NOTE! WARNIING! This caused segmentation fault.. propably too deep recursion rabbit hole...
 				bleedToAdjacents(tileIndex);
 			}
-		}
+		}*/
 	}
 
 	void GeoUpdater::bleedToAdjacents(int tileIndex)
@@ -142,19 +153,19 @@ namespace world
 	}
 
 	
-	void GeoUpdater::drawEdgeLine(int startX, int startY, TileStateDirection startDir)
+	void GeoUpdater::drawEdgeLine(int startX, int startY, TileStateDirection startDir, int maxLength)
 	{
 		int currentX = startX;
 		int currentY = startY;
 		int currentDir = (int)startDir;
-		while(currentX > 0 && currentX < GAME_WORLD_WIDTH - 1 && currentY > 0 && currentY < GAME_WORLD_WIDTH - 1)
+		int currentLength = 0;
+		while((currentX > 0 && currentX < GAME_WORLD_WIDTH - 1 && currentY > 0 && currentY < GAME_WORLD_WIDTH - 1) && currentLength < maxLength)
 		{
 			// Mark current tile as tectonic edge
 			// First prevent adding multiple times
 			int currentTileIndex = currentX + currentY * GAME_WORLD_WIDTH;
 			if(std::find(_tectonicPlateEdges.begin(), _tectonicPlateEdges.end(), currentTileIndex) == _tectonicPlateEdges.end())
 				_tectonicPlateEdges.push_back(currentTileIndex);
-
 
 			// moving forward..
 			int randomDir = (std::rand() % 3) - 1;
@@ -204,6 +215,7 @@ namespace world
 					Debug::log("ERROR");
 					break;
 			}
+			currentLength++;
 		}
 	}
 }

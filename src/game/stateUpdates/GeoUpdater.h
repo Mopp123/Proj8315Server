@@ -3,6 +3,7 @@
 #include "StateUpdater.h"
 #include "game/world/Tile.h"
 #include <vector>
+#include <unordered_set>
 
 class Game;
 
@@ -16,7 +17,7 @@ namespace world
 		std::vector<int> _tectonicPlateEdges;
 		// Tile IDs which are vulcanicly active
 		std::vector<int> _vulcaniclyActive;
-		
+		std::unordered_set<int> _vulcaniclyActive_added;
 	public:
 		GeoUpdater(Game& gameRef, float updateCooldown);
 		~GeoUpdater();
@@ -31,6 +32,6 @@ namespace world
 		// Alters tile's surrounding tiles' elevation
 		void bleedToAdjacents(int tileIndex);
 
-		void drawEdgeLine(int startX, int startY, TileStateDirection startDir);
+		void drawEdgeLine(int startX, int startY, TileStateDirection startDir, int maxLength);
 	};
 };

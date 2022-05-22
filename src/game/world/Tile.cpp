@@ -28,6 +28,14 @@ namespace world
 			TILE_STATE_SIZE_terrType
 		);
 	}
+        void set_tile_terreffect(uint64_t& tile, PK_ubyte value) 
+	{
+		bitshit::set_area<uint64_t, PK_ubyte>(
+			tile, value,
+			TILE_STATE_POS_properties + TILE_STATE_POS_terrEffect,
+			TILE_STATE_SIZE_terrEffect
+		);
+	}
         void set_tile_thingcategory(uint64_t& tile, PK_ubyte value) 
 	{
 		bitshit::set_area<uint64_t, PK_ubyte>(
@@ -91,6 +99,16 @@ namespace world
 			tile, output, 
 			TILE_STATE_POS_properties + TILE_STATE_POS_terrType,
 			TILE_STATE_SIZE_terrType
+		);
+		return output;
+	}
+        PK_ubyte get_tile_terreffect(uint64_t tile) 
+	{
+		PK_ubyte output = 0;
+		bitshit::convert_area<uint64_t, PK_ubyte>(
+			tile, output, 
+			TILE_STATE_POS_properties + TILE_STATE_POS_terrEffect,
+			TILE_STATE_SIZE_terrEffect
 		);
 		return output;
 	}

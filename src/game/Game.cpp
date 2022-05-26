@@ -5,7 +5,6 @@
 #include <mutex>
 #include <unordered_set>
 
-#include "game/stateUpdates/GeoUpdater.h"
 #include "world/Tile.h"
 #include "Debug.h"
 
@@ -13,23 +12,23 @@
 
 Game* Game::s_pInstance = nullptr;
 
-Game::Game()
+Game::Game(int worldWidth) :
+	_worldWidth(worldWidth)
 {
 	s_pInstance = this;
 
 	// Init world state
-	_pWorld = new uint64_t[GAME_WORLD_WIDTH * GAME_WORLD_WIDTH];
-	memset((void*)_pWorld, 0, sizeof(uint64_t) * GAME_WORLD_WIDTH * GAME_WORLD_WIDTH);
+	_pWorld = new uint64_t[_worldWidth * _worldWidth];
+	memset((void*)_pWorld, 0, sizeof(uint64_t) * _worldWidth * _worldWidth);
 
-	world::set_tile_terrtype(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrtype(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 1);
-	world::set_tile_terrelevation(_pWorld[1 + 1 * GAME_WORLD_WIDTH], 3);
-	world::set_tile_terrelevation(_pWorld[2 + 1 * GAME_WORLD_WIDTH], 3);
+	world::set_tile_terrtype(_pWorld[1 + 1 * _worldWidth], 1);
+	world::set_tile_terrtype(_pWorld[2 + 1 * _worldWidth], 2);
+	world::set_tile_terrtype(_pWorld[3 + 1 * _worldWidth], 3);
+	world::set_tile_terrtype(_pWorld[4 + 1 * _worldWidth], 4);
 }
 
 Game::~Game()
 {
-	delete _pGeoUpdater;
 	delete[] _pWorld;
 }
 
@@ -92,10 +91,10 @@ Response Game::getWorldState(int xPos, int zPos, int observeRadius)
 		{
 			//Debug::log("bufPos: " + std::to_string(bufPos));
 			// Make sure coords are valid tile coords
-			if(x >= 0 && x < GAME_WORLD_WIDTH && z >= 0 && z <= GAME_WORLD_WIDTH)
+			if(x >= 0 && x < _worldWidth && z >= 0 && z <= _worldWidth)
 			{
 				// Should never go out of range? since prev if?.
-				int tileIndex = x + z * GAME_WORLD_WIDTH;
+				int tileIndex = x + z * _worldWidth;
 				// .. need to lock so nothing funny happens...
 				std::lock_guard<std::mutex> lock(_mutex_worldState);
 				memcpy((void*)(buffer + bufPos), (void*)(_pWorld + tileIndex), sizeof(uint64_t));
@@ -116,13 +115,13 @@ uint64_t Game::getTileState(int xPos, int zPos)
 	{
 		// Not sure is this kind of "just observing" requiring locking...
 		std::lock_guard<std::mutex> lock(_mutex_worldState);
-		return _pWorld[xPos + zPos * GAME_WORLD_WIDTH];
+		return _pWorld[xPos + zPos * _worldWidth];
 	}
 	return 0;
 }
 uint64_t Game::getTileState(int index)
 {
-	if(index >= 0 && index < GAME_WORLD_WIDTH * GAME_WORLD_WIDTH)
+	if(index >= 0 && index < _worldWidth * _worldWidth)
 	{
 		// Not sure is this kind of "just observing" requiring locking...
 		std::lock_guard<std::mutex> lock(_mutex_worldState);
@@ -136,12 +135,12 @@ void Game::setTileState(int xPos, int zPos, uint64_t newState)
 	if(validCoords(xPos, zPos))
 	{
 		std::lock_guard<std::mutex> lock(_mutex_worldState);
-		_pWorld[xPos + zPos * GAME_WORLD_WIDTH] = newState;
+		_pWorld[xPos + zPos * _worldWidth] = newState;
 	}	
 }
 void Game::setTileState(int index, uint64_t newState)
 {
-	if(index >= 0 && index < GAME_WORLD_WIDTH * GAME_WORLD_WIDTH)
+	if(index >= 0 && index < _worldWidth * _worldWidth)
 	{
 		std::lock_guard<std::mutex> lock(_mutex_worldState);
 		_pWorld[index] = newState;

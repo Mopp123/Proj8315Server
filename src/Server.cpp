@@ -13,8 +13,10 @@
 #include "Debug.h"
 
 
-Server::Server(int port, size_t maxClientCount) : 
-	_port(port), _maxClientCount(maxClientCount), _reqHandler(*this, _game)
+Server::Server(int port, size_t maxClientCount) :
+	_port(port), _maxClientCount(maxClientCount), 
+	_game(32), // *NOTE! size of the game world is just temporarely hardcoded here!
+	_reqHandler(*this, _game)
 {
 
 	// Create socket

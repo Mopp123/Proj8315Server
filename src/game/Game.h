@@ -9,10 +9,7 @@
 #include "Responses.h"
 #include "Faction.h"
 
-#include "stateUpdates/GeoUpdater.h"
-#include "stateUpdates/WeatherUpdater.h"
-
-#define GAME_WORLD_WIDTH 2000
+//#define GAME_WORLD_WIDTH 2000
 
 class Request;
 
@@ -24,18 +21,16 @@ private:
 	mutable std::mutex _mutex_worldState;
 
 	std::unordered_map<std::string, Faction> _factions;
+	int _worldWidth = 32;
 	uint64_t* _pWorld = nullptr;
 
 	static Game* s_pInstance;
-	
-	world::GeoUpdater* _pGeoUpdater = nullptr;
-	world::WeatherUpdater* _pWeatherUpdater = nullptr;
 	
 	bool _run = true;
 
 public:
 
-	Game();
+	Game(int worldWidth);
 	Game(const Game&) = delete;
 	~Game();
 	
@@ -53,8 +48,8 @@ public:
 
 	inline bool validCoords(int x, int z) const 
 	{
-		int index = x + z * GAME_WORLD_WIDTH;
-		return index >= 0 && index < GAME_WORLD_WIDTH * GAME_WORLD_WIDTH;
+		int index = x + z * _worldWidth;
+		return index >= 0 && index < _worldWidth * _worldWidth;
       	}
 private:
 

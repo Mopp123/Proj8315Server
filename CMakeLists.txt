@@ -9,7 +9,7 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
-file (GLOB source_files "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/game/*.cpp" "${PROJECT_SOURCE_DIR}/src/cmds/*.cpp" "${PROJECT_SOURCE_DIR}/src/game/world/*.cpp") 
+file (GLOB source_files "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/game/*.cpp" "${PROJECT_SOURCE_DIR}/src/cmds/*.cpp" "${PROJECT_SOURCE_DIR}/src/game/world/*.cpp" "${PROJECT_SOURCE_DIR}/src/utils/*.cpp")
 
 
 #set (source_files

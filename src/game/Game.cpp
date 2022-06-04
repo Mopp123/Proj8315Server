@@ -1,11 +1,13 @@
 
 #include "Game.h"
+#include "Common.h"
 #include "RequestHandler.h"
 #include <cstring>
 #include <mutex>
 #include <unordered_set>
 
 #include "world/Tile.h"
+#include "world/WorldGenerator.h"
 #include "Debug.h"
 
 #include <chrono>
@@ -25,6 +27,27 @@ Game::Game(int worldWidth) :
 	world::set_tile_terrtype(_pWorld[2 + 1 * _worldWidth], 2);
 	world::set_tile_terrtype(_pWorld[3 + 1 * _worldWidth], 3);
 	world::set_tile_terrtype(_pWorld[4 + 1 * _worldWidth], 4);
+
+	// Testing perlin noise world generation..
+//	float* seedArr = new float[_worldWidth * _worldWidth];
+//	for(int i = 0; i < _worldWidth * _worldWidth; ++i)
+//		seedArr[i] = (float)(std::rand() % 150) * 0.01f;
+//	
+//	std::vector<float> noiseMap = generate_perlin2D(seedArr, _worldWidth, 4, 2.0f);
+//	delete[] seedArr;
+//
+//	for(int i = 0; i < _worldWidth * _worldWidth; ++i)
+//	{
+//		float nVal = noiseMap[i] * 10.0f;
+//		PK_ubyte height = (PK_ubyte)nVal;
+//		Debug::log("h: " + std::to_string(nVal));
+//		world::set_tile_terrelevation(_pWorld[i], height);
+//	}
+	unsigned int worldGenSeed = 4718;
+	int maxElevationVal = 15; // max val of 3 bit uint
+	world::generate_world(_pWorld, _worldWidth, maxElevationVal, worldGenSeed);
+	world::generate_world_waters(_pWorld, _worldWidth);
+	world::generate_temperature_effect(_pWorld, _worldWidth, 128, 20);
 }
 
 Game::~Game()
@@ -91,7 +114,7 @@ Response Game::getWorldState(int xPos, int zPos, int observeRadius)
 		{
 			//Debug::log("bufPos: " + std::to_string(bufPos));
 			// Make sure coords are valid tile coords
-			if(x >= 0 && x < _worldWidth && z >= 0 && z <= _worldWidth)
+			if(x >= 0 && x < _worldWidth && z >= 0 && z < _worldWidth)
 			{
 				// Should never go out of range? since prev if?.
 				int tileIndex = x + z * _worldWidth;

@@ -1,27 +1,5 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <string.h>
-#include <string_view>
-#include <unistd.h>
-#include <sys/types.h> 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <vector>
-#include <iostream>
-
 #include "Server.h"
-
-#include "game/world/Tile.h"
-#include "Debug.h"
-#include <iostream>
-#include <string>
-
-#include "BitShit.hpp"
-
-#include "game/world/Tile.h"
 
 
 int main(const int argc, const char** argv)

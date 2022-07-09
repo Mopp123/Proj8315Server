@@ -12,6 +12,24 @@
 
 namespace world
 {
+
+	static bool is_tile_flat(uint64_t* pWorld, int worldWidth, int x, int y, PK_ubyte currentElevation)
+	{
+		for(int y2 = y - 1; y2 <= y + 1; ++y2)
+		{
+			for(int x2 = x - 1; x2 <= x + 1; ++x2)
+			{
+				const int adjIndex = x2 + y2 * worldWidth;
+				if(adjIndex >= 0 && adjIndex < worldWidth * worldWidth)
+				{
+					if(get_tile_terrelevation(pWorld[x2 + y2 * worldWidth]) != currentElevation)
+						return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	void generate_world(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed)
 	{
 		srand(seed);
@@ -51,9 +69,48 @@ namespace world
 		}
 	}
 
+
+	void generate_world_erosion(uint64_t* pWorld, int worldWidth)
+	{
+		const int cliffValThreshold = 8;
+		for(int y = 0; y < worldWidth; ++y)
+		{
+			for(int x = 0; x < worldWidth; ++x)
+			{
+				const int check_radius = 2;
+				int steepness = 1;
+				int currentIndex = x + y * worldWidth;
+				int currentElevation = (int)get_tile_terrelevation(pWorld[currentIndex]);
+				bool isFlat = is_tile_flat(pWorld, worldWidth, x, y, currentElevation);
+				for(int y2 = y - check_radius; y2 <= y + check_radius; ++y2)
+				{
+					for(int x2 = x - check_radius; x2 <= x + check_radius; ++x2)
+					{
+						const int adjIndex = x2 + y2 * worldWidth;
+						if(adjIndex >= 0 && adjIndex < worldWidth * worldWidth)
+						{
+							int adjElevation = (int)get_tile_terrelevation(pWorld[adjIndex]);
+							steepness += std::abs(currentElevation - adjElevation);
+							if(adjElevation == currentElevation && steepness - 1 > 0 && isFlat)
+								steepness -= 1;
+						}
+					}
+				}
+				int diceThrow = std::rand() % steepness;
+				if(diceThrow >= cliffValThreshold)
+				{
+					set_tile_terrtype(pWorld[currentIndex], 3);
+				}
+			}
+		}
+	}
+
+
 	void generate_world_waters(uint64_t* pWorld, int worldWidth)
 	{
 		const PK_ubyte elev_threshold_water = 2;
+		const PK_ubyte elev_cap_fertile = 5;
+		const int fertilityFrequency = 8;
 		// "calc erosion / water pools"
 		std::unordered_set<int> tilesToSkip;
 		for(int y = 0; y < worldWidth; ++y)
@@ -61,9 +118,17 @@ namespace world
 			for(int x = 0; x < worldWidth; ++x)
 			{
 				int index = x + y * worldWidth;
+				PK_ubyte tileElevation = get_tile_terrelevation(pWorld[index]);
+				if(tileElevation > elev_threshold_water && tileElevation < elev_cap_fertile)
+				{
+					int diceThrow = std::rand() % (tileElevation * tileElevation * tileElevation) / fertilityFrequency;
+					if(diceThrow <= elev_cap_fertile)
+						set_tile_terrtype(pWorld[index], 4);
+					continue;
+				}
+
 				if(tilesToSkip.find(index) != tilesToSkip.end())
 					continue;
-				PK_ubyte tileElevation = get_tile_terrelevation(pWorld[index]);
 				if(tileElevation <= elev_threshold_water)
 				{
 					set_tile_terrelevation(pWorld[index], elev_threshold_water);

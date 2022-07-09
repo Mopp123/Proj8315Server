@@ -46,8 +46,10 @@ Game::Game(int worldWidth) :
 	unsigned int worldGenSeed = 4718;
 	int maxElevationVal = 15; // max val of 3 bit uint
 	world::generate_world(_pWorld, _worldWidth, maxElevationVal, worldGenSeed);
+	world::generate_world_erosion(_pWorld, _worldWidth);
 	world::generate_world_waters(_pWorld, _worldWidth);
 	world::generate_temperature_effect(_pWorld, _worldWidth, 128, 20);
+	world::generate_world_erosion(_pWorld, _worldWidth);
 }
 
 Game::~Game()

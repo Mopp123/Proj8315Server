@@ -1,14 +1,14 @@
 
 #include "WorldGenerator.h"
-#include "Common.h"
+#include "../../Common.h"
 #include "Tile.h"
-#include "utils/Algorithm.h"
+#include "../../utils/Algorithm.h"
 #include <cstdlib>
 #include <cstring>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include "Debug.h"
+#include "../../Debug.h"
 
 namespace world
 {
@@ -30,7 +30,7 @@ namespace world
 		return true;
 	}
 
-	void generate_world(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed)
+	static void generate_world_elevation(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed)
 	{
 		srand(seed);
 		
@@ -70,7 +70,7 @@ namespace world
 	}
 
 
-	void generate_world_erosion(uint64_t* pWorld, int worldWidth)
+	static void generate_world_erosion(uint64_t* pWorld, int worldWidth)
 	{
 		const int cliffValThreshold = 8;
 		for(int y = 0; y < worldWidth; ++y)
@@ -106,7 +106,7 @@ namespace world
 	}
 
 
-	void generate_world_waters(uint64_t* pWorld, int worldWidth)
+	static void generate_world_waters(uint64_t* pWorld, int worldWidth)
 	{
 		const PK_ubyte elev_threshold_water = 2;
 		const PK_ubyte elev_cap_fertile = 5;
@@ -189,7 +189,7 @@ namespace world
 	}
 
 
-	void generate_temperature_effect(uint64_t* pWorld, int worldWidth, int equatorYPos, int baseTemperature)
+	static void generate_temperature_effect(uint64_t* pWorld, int worldWidth, int equatorYPos, int baseTemperature)
 	{
 		for(int y = 0; y < worldWidth; ++y)
 		{
@@ -206,5 +206,13 @@ namespace world
 					set_tile_terrtype(pWorld[index], 2);
 			}
 		}
+	}
+
+	void generate_world(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed, int equatorYPos, int baseTemperature)
+	{
+		generate_world_elevation(pWorld, worldWidth, maxElevationVal, seed);
+		generate_world_erosion(pWorld, worldWidth);
+		generate_world_waters(pWorld, worldWidth);
+		generate_temperature_effect(pWorld, worldWidth, equatorYPos, baseTemperature);
 	}
 }

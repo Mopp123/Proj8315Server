@@ -1,8 +1,43 @@
 #pragma once
 
+#include <cstring>
 
 #define PK_byte char
 #define PK_ubyte unsigned char
 
+#define DIR_N 	0
+#define DIR_NE 	1
+#define DIR_E 	2
+#define DIR_SE 	3
+#define DIR_S 	4
+#define DIR_SW 	5
+#define DIR_W 	6
+#define DIR_NW 	7
+
 #define USER_ID_LEN 32
 
+#define CLIENT_NAME_LEN 32
+#define NULL_CLIENT ClientData(0, "null")
+
+struct ClientData
+{
+	int connSD;
+	char name[CLIENT_NAME_LEN];
+
+	ClientData(int connectionSD, const char* clientName):
+		connSD(connectionSD)
+	{
+		memcpy(name, clientName, sizeof(char) * CLIENT_NAME_LEN);
+	}
+
+	ClientData(const ClientData& other):
+		connSD(other.connSD)
+	{
+		memcpy(name, other.name, sizeof(char) * CLIENT_NAME_LEN);
+	}
+
+	bool operator==(const ClientData& other) const
+	{
+		return (connSD == other.connSD) && (strcmp(name, other.name) == 0);
+	}
+};

@@ -1,0 +1,16 @@
+
+
+state updater
+-------------
+
+for each tile containing object
+ -> run correct "behaviour" code for this object (may alter surrounding tiles' states)
+
+
+
+stats
+-----
+	* Easy way of creating "unit/object/effect, etc" stat sheets, which can be queried by client.
+	These stats contain info how different objects, etc behave on the server, what "skills" and abilities they have.
+	
+	

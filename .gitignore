@@ -1,0 +1,8 @@
+.cache
+CMakeCache.txt
+CMakeFiles
+MMOGameServer
+Makefile
+cmake_install.cmake
+compile_commands.json
+start.sh

@@ -1,24 +1,26 @@
 #pragma once
 
-#include <string>
+#include <cstring>
 
 
+#define FACTION_DATA_MAX_STRLEN 32
 
 class Faction
 {
 private:
 
-	std::string _name;
+	 char _name[FACTION_DATA_MAX_STRLEN];
 
 public:
 
-	Faction(const std::string& name) : 
-		_name(name)
-	{}
+	Faction(const char* name)
+	{
+		memcpy(_name, name, FACTION_DATA_MAX_STRLEN);
+	}
 	
-	Faction(const Faction& other) : 
-		_name(other._name)
-	{}
+	Faction(const Faction& other) = delete;
 
-	inline const std::string& getName() const { return _name; }
+	const char* getName() const { return _name; }
+
+	bool operator==(const Faction& other) { return strcmp(_name, other._name) == 0; }
 };

@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "BitShit.hpp"
+#include "Debug.h"
 
 namespace world
 {
@@ -68,7 +69,7 @@ namespace world
 			TILE_STATE_SIZE_dir
 		);
 	}
-        void set_tile_customvar         (uint64_t& tile, PK_ubyte value) 
+        void set_tile_customvar(uint64_t& tile, PK_ubyte value) 
 	{
 		bitshit::set_area<uint64_t, PK_ubyte>(
 			tile, value,
@@ -76,7 +77,16 @@ namespace world
 			TILE_STATE_SIZE_customVar
 		);
 	}
-
+	void transfer_obj_to(uint64_t& from, uint64_t& to)
+	{
+		uint64_t objState = from;
+		// Grab the bits containing only the info of the "object"
+		bitshit::set_area<uint64_t, uint64_t>(objState, 0x0, 0, TILE_STATE_SIZE - TILE_STATE_SIZE_objProperties);
+		// Remove the "object" bits from the "from-tile"
+		bitshit::set_area<uint64_t, uint64_t>(from, 0x0, TILE_STATE_POS_properties + TILE_STATE_POS_objProperties, TILE_STATE_SIZE_objProperties);
+		// Add the "object" bits to the "to-tile"
+		to |= objState;
+	}
 
         uint32_t get_tile_uid(uint64_t tile) 
 	{

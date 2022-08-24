@@ -1,23 +1,25 @@
 #pragma once
 
 #include <cstdint>
-#include "Common.h"
+#include "../../Common.h"
 
 // Size of the full state (in bytes)
 #define TILE_STATE_SIZE_BYTES 		8
 
 // Sizes of different portions (exact size in BITS NOT BYTES!)
+#define TILE_STATE_SIZE			64
 #define TILE_STATE_SIZE_uid		32
 #define TILE_STATE_SIZE_properties	32
 
 #define TILE_STATE_SIZE_terrElevation	4
 #define TILE_STATE_SIZE_terrType	3
 #define TILE_STATE_SIZE_terrEffect	4
+#define TILE_STATE_SIZE_objProperties	21
 #define TILE_STATE_SIZE_thingCategory	3
 #define TILE_STATE_SIZE_thingID		8
 #define TILE_STATE_SIZE_action		3
 #define TILE_STATE_SIZE_dir		3
-#define TILE_STATE_SIZE_customVar	8
+#define TILE_STATE_SIZE_customVar	4
 
 
 // Bit positions in the "state"
@@ -26,6 +28,7 @@
 #define TILE_STATE_POS_terrElevation	0
 #define TILE_STATE_POS_terrType		4
 #define TILE_STATE_POS_terrEffect	7
+#define TILE_STATE_POS_objProperties	11
 #define TILE_STATE_POS_thingCategory	11
 #define TILE_STATE_POS_thingID		14
 #define TILE_STATE_POS_action		22
@@ -95,7 +98,8 @@ namespace world
 	void set_tile_action		(uint64_t& tile, PK_ubyte value);
 	void set_tile_facingdir		(uint64_t& tile, PK_ubyte value);
 	void set_tile_customvar		(uint64_t& tile, PK_ubyte value);
-
+	// Some more specific custom stuff
+	void transfer_obj_to		(uint64_t& from, uint64_t& to); // Transfers object from one tile to another ()
 
 	uint32_t get_tile_uid		(uint64_t tile);
 	PK_ubyte get_tile_terrelevation	(uint64_t tile);

@@ -5,10 +5,11 @@
 #include <vector>
 #include "Common.h"
 #include "game/Game.h"
-#include "RequestHandler.h"
+#include "MessageHandler.h"
 #include <unordered_map>
 
 #include <thread>
+#include <mutex>
 
 class Server
 {
@@ -19,13 +20,16 @@ private:
 
 	size_t _maxClientCount = 1024;
 
-	const size_t _maxRecvBufLen = 512;
-	PK_byte* _pRecvBuf = nullptr;
-
 	Game _game;
-	RequestHandler _reqHandler;
-	std::thread* _reqHandlerThread = nullptr;
+	MessageHandler _messageHandler;
+	std::thread* _msgHandlerThread = nullptr;
 	std::thread* _gameThread = nullptr;
+
+	// Currently connected (and validated) clients
+	mutable std::mutex _clientListingMutex;
+	std::vector<ClientData> _clients;
+
+	static bool s_shutdown;
 public:
 
 	Server(int port, size_t maxClientCount);
@@ -34,11 +38,17 @@ public:
 	void beginReqHandler();
 	void beginGame();
 	void run();
-	
+	void shutdown();
 
-private:
-	
-	size_t findContentLength(const PK_byte* data, size_t dataLen) const;
+	// Establishes new connection (thread safe)
+	void connectNewClient(int connSD);
+	// Removes connection (thread safe)
+	void disconnectClient(int connSD);
 
-	//Request convertToReq(PK_byte* data, size_t dataLen, size_t bodyLen, int clientSD);
+	// Returns vector containing each connection sock. desc. (Thread safely)
+	std::vector<ClientData> getClientConnections() const;
+
+	static void trigger_shutdown();
+	static bool is_shutting_down();
 };
+

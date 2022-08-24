@@ -2,14 +2,14 @@
 #include "WorldState.h"
 #include "game/Game.h"
 
-namespace cmds
+namespace msgs
 {
-	
-	Response cmd_fetchWorldState(const Command& cmd)
+	Message msg_fetchWorldState(const Message& msg)
 	{
-		if(cmd.getArgBufSize() == sizeof(int32_t) * 3)
+		const size_t msgSize = msg.getSize();
+		if(msgSize == MESSAGE_MIN_DATA_SIZE + sizeof(int32_t) * 3)
 		{
-			const PK_byte* buf = cmd.getArgs();
+			const PK_byte* buf = msg.getData() + MESSAGE_MIN_DATA_SIZE;
 			int32_t xPos = -1;
 			int32_t zPos = -1;
 			int32_t observeRadius = -1;
@@ -22,7 +22,7 @@ namespace cmds
 		}
 		else
 		{
-			return { nullptr, 0 };
+			return NULL_MESSAGE;
 		}
 	}
 }

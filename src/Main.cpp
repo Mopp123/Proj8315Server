@@ -4,15 +4,16 @@
 
 int main(const int argc, const char** argv)
 {
-	Server server(51421, 1024);
+	Server server(51422, 1024);
 
 	server.beginReqHandler();
 	server.beginGame();
 
-	while(true)
+	while(!server.is_shutting_down())
 	{
 		server.run();
 	}
+	server.shutdown();
 
 	return 0;
 }

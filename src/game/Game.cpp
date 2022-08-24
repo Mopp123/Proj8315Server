@@ -1,16 +1,19 @@
 
 #include "Game.h"
-#include "Common.h"
-#include "RequestHandler.h"
+#include "../Common.h"
+#include "MessageHandler.h"
 #include <cstring>
 #include <mutex>
 #include <unordered_set>
 
+#include "objects/Object.h"
+#include "objects/ObjectUpdater.h"
 #include "world/Tile.h"
 #include "world/WorldGenerator.h"
-#include "Debug.h"
+#include "../Debug.h"
 
 #include <chrono>
+
 
 Game* Game::s_pInstance = nullptr;
 
@@ -22,73 +25,84 @@ Game::Game(int worldWidth) :
 	// Init world state
 	_pWorld = new uint64_t[_worldWidth * _worldWidth];
 	memset((void*)_pWorld, 0, sizeof(uint64_t) * _worldWidth * _worldWidth);
-
-	world::set_tile_terrtype(_pWorld[1 + 1 * _worldWidth], 1);
-	world::set_tile_terrtype(_pWorld[2 + 1 * _worldWidth], 2);
-	world::set_tile_terrtype(_pWorld[3 + 1 * _worldWidth], 3);
-	world::set_tile_terrtype(_pWorld[4 + 1 * _worldWidth], 4);
-
-	// Testing perlin noise world generation..
-//	float* seedArr = new float[_worldWidth * _worldWidth];
-//	for(int i = 0; i < _worldWidth * _worldWidth; ++i)
-//		seedArr[i] = (float)(std::rand() % 150) * 0.01f;
-//	
-//	std::vector<float> noiseMap = generate_perlin2D(seedArr, _worldWidth, 4, 2.0f);
-//	delete[] seedArr;
-//
-//	for(int i = 0; i < _worldWidth * _worldWidth; ++i)
-//	{
-//		float nVal = noiseMap[i] * 10.0f;
-//		PK_ubyte height = (PK_ubyte)nVal;
-//		Debug::log("h: " + std::to_string(nVal));
-//		world::set_tile_terrelevation(_pWorld[i], height);
-//	}
+	
 	unsigned int worldGenSeed = 4718;
 	int maxElevationVal = 15; // max val of 3 bit uint
-	world::generate_world(_pWorld, _worldWidth, maxElevationVal, worldGenSeed);
-	world::generate_world_erosion(_pWorld, _worldWidth);
-	world::generate_world_waters(_pWorld, _worldWidth);
-	world::generate_temperature_effect(_pWorld, _worldWidth, 128, 20);
-	world::generate_world_erosion(_pWorld, _worldWidth);
+	world::generate_world(_pWorld, _worldWidth, maxElevationVal, worldGenSeed, 128, 20);
+
+	_objUpdater = new world::objects::ObjectUpdater(*this);
+
+	// *Initially we always need at least one "static-neutral" faction
+	Faction* neutralFaction = new Faction("Neutral");
+	_factions.insert(std::make_pair(neutralFaction->getName(), neutralFaction));
+
+	// initialize object types "library"
+	// *JUST FOR TESTING ATM!
+	uint64_t testInitialObjState = 0;
+	world::set_tile_thingid(testInitialObjState, 1);
+	
+	_objectInfo.push_back({"Empty", "", 0, 0});
+	_objectInfo.push_back({"Tree1", "A testing tree object", 0, testInitialObjState});
+	_objectInfo.push_back({"Movement Test", "For testing movement stuff", 1, testInitialObjState});
+
+	for (int y = 0; y < _worldWidth; ++y)
+	{
+		for (int x = 0; x < _worldWidth; ++x)
+		{
+			int index = x + y * _worldWidth;
+			uint64_t currentState = _pWorld[index];
+			PK_ubyte terrType = world::get_tile_terrtype(currentState);
+			if (terrType == 4)
+			{
+				int diceThrow = std::rand() % 100;
+				if (diceThrow > 15)
+				{
+					_objUpdater->spawnObject(x, y, 1, neutralFaction);
+				}
+			}
+		}
+	}
 }
 
 Game::~Game()
 {
+	for (std::pair<std::string, Faction*> f : _factions)
+		delete f.second;
+
+	delete _objUpdater;
 	delete[] _pWorld;
 }
-
 
 void Game::run()
 {
 	while(_run)
 	{
-		//std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
+		std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
 		
-		//_pGeoUpdater->update();
-		//_pWeatherUpdater->update();
+		_objUpdater->update();
 
-
-		/*std::chrono::time_point<std::chrono::high_resolution_clock> endTime = std::chrono::high_resolution_clock::now();
-
+		std::chrono::time_point<std::chrono::high_resolution_clock> endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<float> delta = endTime - startTime ;
-		Debug::log("Game update took: " + std::to_string(delta.count()));*/
+		//Debug::log("Game update took: " + std::to_string(delta.count()));
+		_deltaTime = delta.count();
+
+		//Debug::log("Delta: " + std::to_string(_deltaTime));
 	}
 }
 
-Response Game::addFaction(const std::string& userID, const std::string& factionName)
+Message Game::addFaction(const char* factionName)
 {
 	std::lock_guard<std::mutex> lock(_mutex_faction);
 	std::string responseMessage;
 	
-	Debug::log("Attempting to create faction: " + factionName + "(strlen: " + std::to_string(factionName.size()) + ")");
+	std::string factionNameStr = factionName;
+	Debug::log("Attempting to create faction: " + factionNameStr);
 
-	auto iter = _factions.find(userID);
+	auto iter = _factions.find(factionNameStr);
 	if(iter == _factions.end())
 	{
-		Faction newFaction(factionName);
-		_factions.insert(std::make_pair(userID, newFaction));
+		_factions.insert(std::make_pair(factionNameStr, new Faction(factionName)));
 		responseMessage = "Success";
-
 		Debug::log("New faction created successfully(faction count: " + std::to_string(_factions.size()));
 	}
 	else
@@ -96,11 +110,10 @@ Response Game::addFaction(const std::string& userID, const std::string& factionN
 		responseMessage = "Failure";
 	}
 
-	return { responseMessage.data(), responseMessage.size() };
+	return Message(NULL_CLIENT, responseMessage.data(), responseMessage.size());
 }
 
-
-Response Game::getWorldState(int xPos, int zPos, int observeRadius)
+Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 {
 	const int observeRectWidth = (observeRadius * 2) + 1;
 	size_t bufSize = (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
@@ -129,12 +142,33 @@ Response Game::getWorldState(int xPos, int zPos, int observeRadius)
 
 		}
 	}
-	Response response(buffer, bufSize);
+	Message response(NULL_CLIENT, buffer, bufSize);
 	delete[] buffer;
 	return response;
 }
 
-uint64_t Game::getTileState(int xPos, int zPos)
+Message Game::getObjectInfo() const
+{
+	const size_t objSize = _objectInfo[0].getSize();
+	const size_t bufSize = _objectInfo.size() * objSize;
+	
+	PK_byte* buffer = new PK_byte[bufSize];
+	memset(buffer, 0, bufSize);
+
+	size_t bufPos = 0;
+	
+	for(const world::objects::ObjectInfo& objInfo : _objectInfo)
+	{
+		// *NOTE! Not sure if needing to lock to prevent nothing funny happening...
+		memcpy((void*)(buffer + bufPos), (const void*)(&objInfo), objSize);
+		bufPos += objSize;
+	}
+	Message response(NULL_CLIENT, buffer, bufSize);
+	delete[] buffer;
+	return response;
+}
+
+uint64_t Game::getTileState(int xPos, int zPos) const
 {
 	if(validCoords(xPos, zPos))
 	{
@@ -144,7 +178,8 @@ uint64_t Game::getTileState(int xPos, int zPos)
 	}
 	return 0;
 }
-uint64_t Game::getTileState(int index)
+
+uint64_t Game::getTileState(int index) const
 {
 	if(index >= 0 && index < _worldWidth * _worldWidth)
 	{
@@ -163,6 +198,7 @@ void Game::setTileState(int xPos, int zPos, uint64_t newState)
 		_pWorld[xPos + zPos * _worldWidth] = newState;
 	}	
 }
+
 void Game::setTileState(int index, uint64_t newState)
 {
 	if(index >= 0 && index < _worldWidth * _worldWidth)
@@ -172,7 +208,13 @@ void Game::setTileState(int index, uint64_t newState)
 	}	
 }
 
+float Game::getDeltaTime()
+{
+	return _deltaTime;
+}
+
 Game* Game::get()
 {
 	return s_pInstance;
 }
+

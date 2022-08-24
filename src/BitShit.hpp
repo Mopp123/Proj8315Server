@@ -19,6 +19,7 @@ namespace bitshit
 	        isSet = (val >> pos) & 0x1;
 	}
 
+
 	// Sets bit in "target" at "pos" to "set" or "not set"
 	template<typename T>
 	void set_bit(T& target, int pos, bool bit)

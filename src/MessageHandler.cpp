@@ -11,25 +11,25 @@
 
 
 Message::Message(const ClientData& client, char* pData, size_t dataLen) : 
-	_client(client)
+	_client(client), _dataLen(dataLen)
 {
-	if (pData && dataLen > MESSAGE_MIN_DATA_SIZE && dataLen <= MESSAGE_MAX_DATA_SIZE)
+	if (pData && _dataLen >= MESSAGE_MIN_DATA_SIZE && _dataLen <= MESSAGE_MAX_DATA_SIZE)
 	{
-		_dataLen = dataLen;
 		_pData = new PK_byte[_dataLen];
 		memcpy(_pData, pData, _dataLen);
 	}
-	else
+	else if (client != NULL_CLIENT)
 	{
 		std::string dataStr(pData, dataLen);
-		const std::string msg = "Attempted to create Message instance with invalid data. raw data: " + dataStr + " data size: " + std::to_string(dataLen);
+		const std::string msg = "Attempted to create Message instance with invalid data. raw data: " + dataStr + " data size: " + std::to_string(dataLen) + " Maximum data size is: " + std::to_string(MESSAGE_MAX_DATA_SIZE);
+		Debug::log(msg);
 	}
 }
 
 Message::Message(const Message& other) :
-	_client(other._client)
+	_client(other._client), _dataLen(other._dataLen)
 {
-	if (other._pData && other._dataLen > 0)
+	if (other._pData && other._dataLen >= MESSAGE_MIN_DATA_SIZE)
 	{
 		_dataLen = other._dataLen;
 		_pData = new PK_byte[_dataLen];
@@ -47,6 +47,8 @@ int32_t Message::getType() const
 	int32_t type = -1;
 	if(_pData && _dataLen >= MESSAGE_MIN_DATA_SIZE)
 		memcpy(&type, _pData, MESSAGE_ENTRY_SIZE__header);
+
+	//Debug::log("Received message of type: " + std::to_string(type));
 
 	return type;
 }
@@ -91,8 +93,9 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
 	memset(_pRecvBuf, 0, _maxRecvBufLen);
 
 	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFaction, msgs::msg_createNewFaction));
-	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__FetchServerMessage, msgs::msg_fetchServerMessage));
-	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__FetchWorldState, msgs::msg_fetchWorldState));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetServerMessage, msgs::msg_getServerMessage));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::msg_updateObserver));
+	//_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));
 	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::msg_serverShutdown));
 }
 
@@ -114,41 +117,45 @@ void MessageHandler::run()
 		std::vector<ClientData> currentClients = _serverRef.getClientConnections();
 		for (ClientData& client : currentClients)
 		{
-			size_t readBytes = read(client.connSD, _pRecvBuf, _maxRecvBufLen);
+			ssize_t readBytes = read(client.connSD, _pRecvBuf, _maxRecvBufLen);
 			
-			std::string fullMessage(_pRecvBuf, readBytes);
-			Debug::log("\nFULL MESSAGE:\n" + fullMessage + "\n");
+			//std::string fullMessage(_pRecvBuf, readBytes);
+			//Debug::log("\nFULL MESSAGE:\n" + fullMessage + "\n");
 			
 			if (readBytes > 0)
 			{
 				Message msg(client, _pRecvBuf, readBytes);
 				Message response = processMessage(msg);
 				if (response != NULL_MESSAGE)
-					send(msg.getClient().connSD, response.getData(), response.getSize(), 0);
-				
-				// JUST FOR TESTING..
-				/*
-				std::string message = "Welcome websockets yey!";
-				Debug::log("Attempting to send...");
-				send(client.connSD, message.data(), message.size(), 0);
-				*/
+				{
+					ssize_t sentBytes = send(msg.getClient().connSD, response.accessData(), response.getSize(), MSG_NOSIGNAL);
+					if (sentBytes < 0)
+						Debug::log("ERROR ON SENDING!");
+				}
 			}
 			memset(_pRecvBuf, 0, _maxRecvBufLen);
+
+			// Broadcast game world state each tick
+			Message worldStateMsg = _gameRef.getWorldState(client.xPos, client.zPos, client.observeRadius);
+			ssize_t sentBytes = send(client.connSD, worldStateMsg.accessData(), worldStateMsg.getSize(), MSG_NOSIGNAL);
+			// TODO: Better probing for dropped connections!
+			if (sentBytes <= 0)
+				_serverRef.disconnectClient(client.connSD);
 		}
 	}
 }
 
-Message MessageHandler::processMessage(const Message& msg)
+Message MessageHandler::processMessage(Message& msg)
 {
 	const int32_t msgType = msg.getType();
 	auto iter = _msgFuncMapping.find(msgType);
 	if(iter != _msgFuncMapping.end())
 	{
-		return (*_msgFuncMapping[msgType])(msg);
+		return (*_msgFuncMapping[msgType])(_serverRef, msg);
 	}
 	else
 	{
-		Debug::log("Failed to process command. Couldn't find cmd name");
+		Debug::log("Failed to process message. Couldn't find message name");
 		return NULL_MESSAGE;
 	}
 }

@@ -1,11 +1,14 @@
 
 #include "WorldState.h"
+#include "Server.h"
 #include "game/Game.h"
+
 
 namespace msgs
 {
-	Message msg_fetchWorldState(const Message& msg)
+	Message msg_fetchWorldState(Server& server, Message& msg)
 	{
+		/*
 		const size_t msgSize = msg.getSize();
 		if(msgSize == MESSAGE_MIN_DATA_SIZE + sizeof(int32_t) * 3)
 		{
@@ -24,5 +27,7 @@ namespace msgs
 		{
 			return NULL_MESSAGE;
 		}
+		*/
+		return NULL_MESSAGE;
 	}
 }

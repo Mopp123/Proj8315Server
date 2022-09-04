@@ -45,6 +45,9 @@ Game::Game(int worldWidth) :
 	_objectInfo.push_back({"Tree1", "A testing tree object", 0, testInitialObjState});
 	_objectInfo.push_back({"Movement Test", "For testing movement stuff", 1, testInitialObjState});
 
+	// Testing movement with this obj
+	_objUpdater->spawnObject(50, 50, 2, neutralFaction);
+	
 	for (int y = 0; y < _worldWidth; ++y)
 	{
 		for (int x = 0; x < _worldWidth; ++x)
@@ -55,7 +58,7 @@ Game::Game(int worldWidth) :
 			if (terrType == 4)
 			{
 				int diceThrow = std::rand() % 100;
-				if (diceThrow > 15)
+				if (diceThrow > 40)
 				{
 					_objUpdater->spawnObject(x, y, 1, neutralFaction);
 				}
@@ -75,10 +78,18 @@ Game::~Game()
 
 void Game::run()
 {
+	world::objects::ObjectInstanceData* obj = _objUpdater->accessObject(0);
+
 	while(_run)
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
 		
+		if (obj->getActionQueue().size() < 2)
+		{
+			int r = (std::rand() % 8) + 1;
+			obj->addAction(r);
+		}
+
 		_objUpdater->update();
 
 		std::chrono::time_point<std::chrono::high_resolution_clock> endTime = std::chrono::high_resolution_clock::now();
@@ -116,12 +127,16 @@ Message Game::addFaction(const char* factionName)
 Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 {
 	const int observeRectWidth = (observeRadius * 2) + 1;
-	size_t bufSize = (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
+	size_t bufSize = sizeof(int32_t) + (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
 	
 	PK_byte* buffer = new PK_byte[bufSize];
 	memset(buffer, 0, bufSize);
 
-	size_t bufPos = 0;
+	// Set first 4 bytes to contain message type name
+	const int32_t messageType = MESSAGE_TYPE__GetWorldState;
+	memcpy(buffer, (const void*)&messageType, sizeof(int32_t));
+
+	size_t bufPos = sizeof(int32_t);
 	
 	for(int z = zPos - observeRadius; z <= zPos + observeRadius; ++z)
 	{
@@ -139,7 +154,6 @@ Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 				
 			}
 			bufPos += sizeof(uint64_t);
-
 		}
 	}
 	Message response(NULL_CLIENT, buffer, bufSize);

@@ -2,6 +2,8 @@
 
 #include "MessageHandler.h"
 
+class Server;
+
 namespace msgs
 {
 	/*
@@ -12,5 +14,5 @@ namespace msgs
 		2 = y pos (int32_t)
 		3 = radius (int32_t)
 	*/
-	Message msg_fetchWorldState(const Message& msg);
+	Message msg_fetchWorldState(Server& server, Message& msg);
 }

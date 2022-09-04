@@ -24,6 +24,10 @@ struct ClientData
 	int connSD;
 	char name[CLIENT_NAME_LEN];
 
+	int xPos = 0;
+	int zPos = 0;
+	int observeRadius = 15;
+
 	ClientData(int connectionSD, const char* clientName):
 		connSD(connectionSD)
 	{
@@ -31,7 +35,8 @@ struct ClientData
 	}
 
 	ClientData(const ClientData& other):
-		connSD(other.connSD)
+		connSD(other.connSD),
+		xPos(other.xPos), zPos(other.zPos), observeRadius(other.observeRadius)
 	{
 		memcpy(name, other.name, sizeof(char) * CLIENT_NAME_LEN);
 	}
@@ -39,5 +44,10 @@ struct ClientData
 	bool operator==(const ClientData& other) const
 	{
 		return (connSD == other.connSD) && (strcmp(name, other.name) == 0);
+	}
+
+	bool operator!=(const ClientData& other) const
+	{
+		return !(other == *this);
 	}
 };

@@ -38,11 +38,11 @@ namespace world
 						z += 1;
 						break;
 					case DIR_S:
-						z -= 1;
+						z += 1;
 						break;
 					case DIR_SW:
 						x -= 1;
-						z -= 1;
+						z += 1;
 						break;
 					case DIR_W:
 						x -= 1;
@@ -88,6 +88,7 @@ namespace world
 					// ONLY FOR TESTING ATM!!!
 					float speed = 1.0f;
 					set_tile_action(startTile, 1);
+					set_tile_facingdir(startTile, _dir);
 					obj->setState(startTile);
 					actionProgress += speed * Game::get()->getDeltaTime();
 					return ACTION_STATUS_PENDING;

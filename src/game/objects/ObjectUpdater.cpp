@@ -16,7 +16,18 @@ namespace world
 		ObjectUpdater::ObjectUpdater(Game& gameRef) :
 			StateUpdater(gameRef)
 		{
-			_actionsMapping = { new actions::IdleAction, new actions::Move(0) };
+			
+			_actionsMapping = { 
+				new actions::IdleAction, 
+				new actions::Move(TileStateDirection::TILE_STATE_dirN), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirNE), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirE), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirSE), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirS), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirSW), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirW), 
+				new actions::Move(TileStateDirection::TILE_STATE_dirNW)
+			};
 		}
 	
 		ObjectUpdater::~ObjectUpdater()
@@ -41,29 +52,16 @@ namespace world
 	
 	 	void ObjectUpdater::updateFunc()
 		{
-			int objectsMoving = 0;
-			int objectsIdle = 0;
-
 			for (ObjectInstanceData* obj : _allObjects)
 			{
 				std::queue<int>& actionQueue = obj->getActionQueue();
 				
 				// *Make sure we always have at least idle action going on (currently illegal to ever have empty action queue)
 				if (actionQueue.empty())
-				{
-					// !!!ATM JUST FOR TESTING!!!
-					actionQueue.push(ACTION_TEST);
-					//actionQueue.push(ACTION_IDLE);
-				}
+					actionQueue.push(ACTION_IDLE);
 
 				const int currentActionID = actionQueue.front();
 				PK_ubyte actionStatus = _actionsMapping[currentActionID]->run(obj, _gameRef._pWorld, _gameRef._worldWidth);
-
-				PK_ubyte realAction = get_tile_action(obj->getTileState());
-				if (realAction == 0)
-					objectsIdle++;
-				if (realAction == 1)
-					objectsMoving++;
 
 				switch (actionStatus)
 				{
@@ -74,9 +72,6 @@ namespace world
 					case ACTION_STATUS_FAILURE:
 						//Debug::log("Action failed");
 						actionQueue.pop();
-						// JUST FOR TESTING!!!
-						//actionQueue.push(0);
-						//actionQueue.push(ACTION_TEST);
 						break;
 					case ACTION_STATUS_PENDING:
 						break;
@@ -85,8 +80,6 @@ namespace world
 						break;
 				}
 			}
-			//Debug::log("objects moving = " + std::to_string(objectsMoving));
-			//Debug::log("objects idle = " + std::to_string(objectsIdle));
 		}
 	}
 }

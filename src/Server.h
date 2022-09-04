@@ -11,6 +11,7 @@
 #include <thread>
 #include <mutex>
 
+
 class Server
 {
 private:
@@ -26,16 +27,16 @@ private:
 	std::thread* _gameThread = nullptr;
 
 	// Currently connected (and validated) clients
-	mutable std::mutex _clientListingMutex;
+	mutable std::mutex _mutex;
 	std::vector<ClientData> _clients;
 
 	static bool s_shutdown;
-public:
 
+public:
 	Server(int port, size_t maxClientCount);
 	~Server();
 
-	void beginReqHandler();
+	void beginMsgHandler();
 	void beginGame();
 	void run();
 	void shutdown();
@@ -45,6 +46,8 @@ public:
 	// Removes connection (thread safe)
 	void disconnectClient(int connSD);
 
+	void updateClientData(const ClientData& toUpdate, int32_t xPos, int32_t zPos, int32_t observeRadius);
+	
 	// Returns vector containing each connection sock. desc. (Thread safely)
 	std::vector<ClientData> getClientConnections() const;
 

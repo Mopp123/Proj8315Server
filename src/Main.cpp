@@ -6,7 +6,7 @@ int main(const int argc, const char** argv)
 {
 	Server server(51422, 1024);
 
-	server.beginReqHandler();
+	server.beginMsgHandler();
 	server.beginGame();
 
 	while(!server.is_shutting_down())
@@ -14,6 +14,8 @@ int main(const int argc, const char** argv)
 		server.run();
 	}
 	server.shutdown();
+
+	Debug::log("SHUTTING DOWN!!!");
 
 	return 0;
 }

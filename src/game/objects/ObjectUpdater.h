@@ -21,13 +21,13 @@ namespace world
 			};
 
 			std::vector<Action*> _actionsMapping;
-	
+
 	        public:
 			ObjectUpdater(Game& gameRef);
 			~ObjectUpdater();
 	
 			void spawnObject(int x, int z, int objLibIndex, Faction* faction);
-	
+			inline ObjectInstanceData* accessObject(int index) { return _allObjects[index]; }
 	        protected:
 			virtual void updateFunc();
 	        };

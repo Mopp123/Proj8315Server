@@ -15,6 +15,7 @@
 #include "Server.h"
 #include "Debug.h"
 
+
 bool Server::s_shutdown = false;
 
 Server::Server(int port, size_t maxClientCount) :
@@ -32,9 +33,7 @@ Server::Server(int port, size_t maxClientCount) :
 	// Set reusable for development..
 	int opt_reuse = 1;
 	if (setsockopt(_serverSD, SOL_SOCKET, SO_REUSEADDR, &opt_reuse, (socklen_t)(sizeof(int))) < 0)
-	{
 		Debug::log("Failed to set sockopt SO_REUSEADDR");
-	}
 	
 	// Config address
 	memset(&_address, 0, sizeof(_address));
@@ -57,7 +56,7 @@ Server::~Server()
 {
 }
 
-void Server::beginReqHandler()
+void Server::beginMsgHandler()
 {
 	if(!_msgHandlerThread)
 		_msgHandlerThread = new std::thread(&MessageHandler::run, &_messageHandler);
@@ -73,65 +72,50 @@ void Server::beginGame()
 		Debug::log("Attempted to launch Game multiple times!");
 }
 
-
-static int s_current_conn = 0;
 void Server::run()
 {
 	sockaddr_in clientAddress;	
 	memset(&clientAddress, 0, sizeof(clientAddress));
 	socklen_t clientLen = sizeof(clientAddress);
 	int connSD = accept(_serverSD, (struct sockaddr*)&clientAddress, &clientLen);
-	s_current_conn = connSD;
 	
 	// Get details of conn..
-	getpeername(connSD, (struct sockaddr*)&clientAddress, &clientLen);
+	//getpeername(connSD, (struct sockaddr*)&clientAddress, &clientLen);
 	//char* clientAddrName = inet_ntoa(clientAddress.sin_addr);
 	//unsigned short clientPort = ntohs(clientAddress.sin_port);
 	
 	// TODO: connection validation (using initial message) before adding to "connected clients"
 	if (connSD)
-		connectNewClient(connSD);
-	/*
-	size_t readBytes = read(connSD, _pRecvBuf, _maxRecvBufLen);
-
-		std::string fullMessage(_pRecvBuf, readBytes);
-		Debug::log("\nFULL MESSAGE:\n" + fullMessage + "\n");
-		
-		Message msg()
-		Request req(connSD, _pRecvBuf + bodyBeginPos, bodySize);
-
-		//Debug::log("Parsed body size was: " + std::to_string(bodySize));
-		//_reqHandler.addToReqQueue(req);
-
-		// resert recv buf for next upcomming reqs
-		memset(_pRecvBuf, 0, _maxRecvBufLen);
-
-		// JUST FOR TESTING..
-		std::string message = "Welcome websockets yey!";
-		Debug::log("Attempting to send...");
-		send(req.getClientSD(), message.data(), message.size(), 0);
-	*/
+	{
+		bool connectionExists = false;
+		for (ClientData& client : _clients)
+		{
+			if (client.connSD == connSD)
+			{
+				connectionExists = true;
+				break;
+			}
+		}
+		if (!connectionExists)
+			connectNewClient(connSD);
+		else
+			Debug::log("Double connecting prevented");
+	}
 }
 
 // TODO: Safe and "complete" server shutdown func
 void Server::shutdown()
 {
-	// atm these threads may have infinite loops...
-	/*
-	if(_reqHandlerThread)
-	{
-		_reqHandlerThread->join();
-		delete _reqHandlerThread;
-	}
-
 	if(_gameThread)
 	{
 		_gameThread->join();
 		delete _gameThread;
 	}
-	*/
-	if (s_current_conn)
-		close(s_current_conn);
+	for (ClientData& client : _clients)
+	{
+		if (client.connSD)
+			close(client.connSD);
+	}
 	close(_serverSD);
 }
 
@@ -143,25 +127,46 @@ void Server::trigger_shutdown()
 
 void Server::connectNewClient(int connSD)
 {
-	std::lock_guard<std::mutex> lock(_clientListingMutex);
+	Debug::log("Attempting to connect new client");
+	std::lock_guard<std::mutex> lock(_mutex);
+	// TODO: some kind of validation stuff..
+	ClientData newClient(connSD, "null");
+	_clients.push_back(newClient);
 }
 
 void Server::disconnectClient(int connSD)
 {
-	std::lock_guard<std::mutex> lock(_clientListingMutex);
+	std::lock_guard<std::mutex> lock(_mutex);
 	size_t pos = 0;
 	for (const ClientData& connectedClient : _clients)
 	{
 		if (connectedClient.connSD == connSD)
-			return;
+			break;
 		pos++;
 	}
+	Debug::log("Client disconnected");
 	_clients.erase(_clients.begin() + pos);
+}
+
+void Server::updateClientData(const ClientData& toUpdate, int32_t xPos, int32_t zPos, int32_t observeRadius)
+{
+	std::lock_guard<std::mutex> lock(_mutex);
+	// TODO: optimize client finding
+	for (ClientData& client : _clients)
+	{
+		if (client == toUpdate)
+		{
+			client.xPos = xPos;
+			client.zPos = zPos;
+			client.observeRadius = observeRadius;
+			break;
+		}
+	}
 }
 
 std::vector<ClientData> Server::getClientConnections() const
 {
-	std::lock_guard<std::mutex> lock(_clientListingMutex);
+	std::lock_guard<std::mutex> lock(_mutex);
 	std::vector<ClientData> clientList(_clients);
 	return clientList;
 }
@@ -170,40 +175,3 @@ bool Server::is_shutting_down()
 {
 	return s_shutdown;
 }
-
-/*
-size_t Server::findContentLength(const PK_byte* data, size_t dataLen) const
-{
-	std::string msg(data, dataLen);
-	const std::string toFind = "Content-Length: ";
-
-	size_t pos = msg.find(toFind);
-	if(pos != std::string::npos)
-	{
-		std::string len_str(data + pos + toFind.size());
-		return std::stoi(len_str);
-	}
-	return 0;
-}
-
-Request Server::convertToReq(PK_byte* data, size_t dataLen, size_t bodyLen, int clientSD)
-{
-	size_t bodyBegin = dataLen - bodyLen;
-	PK_byte messageType = data[bodyBegin];
-	std::vector<ByteBuffer> reqContent;
-	
-	// attempt to parse user id, if it is contained in the data (its the next part in body after messageType)
-	char userID[32];
-	memset(userID, 0, 32);
-	if(bodyLen > 32)
-	{
-		memcpy(userID, data+ bodyBegin + 1, 32);
-	}
-
-	
-	
-	Request req(clientSD, data + bodyBegin, bodyLen);
-	return req;
-}
-*/
-

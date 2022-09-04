@@ -19,16 +19,18 @@
 
 #define NULL_MESSAGE Message(NULL_CLIENT, nullptr, 0)
 
-#define MESSAGE_TYPE__FetchServerMessage 	0x1
-#define MESSAGE_TYPE__CreateFaction 		0x2
-#define MESSAGE_TYPE__FetchWorldState 		0x3
-#define MESSAGE_TYPE__ServerShutdown 		0x5
+#define MESSAGE_TYPE__GetServerMessage          0x1                                          
+#define MESSAGE_TYPE__CreateFaction             0x2                                          
+#define MESSAGE_TYPE__GetWorldState             0x3                                          
+#define MESSAGE_TYPE__UpdateObserverProperties 	0x4                                          
+#define MESSAGE_TYPE__ServerShutdown            0x5 
+
 
 class Message
 {
 private:
-	ClientData _client; // client which sent this message
-	PK_byte* _pData;
+	ClientData _client = NULL_CLIENT; // client which sent this message
+	PK_byte* _pData = nullptr;
 	size_t _dataLen = 0;
 	
 public:
@@ -39,7 +41,7 @@ public:
 	int32_t getType() const;
 
 	inline const ClientData& getClient() const { return _client; }
-	inline const PK_byte* getData() const { return _pData; }
+	inline PK_byte* accessData() { return _pData; }
 	inline size_t getSize() const { return _dataLen; }
 	
 	bool operator==(const Message& other)
@@ -80,13 +82,12 @@ private:
 	PK_byte* _pRecvBuf = nullptr;
 
 	// specifies what happens on each different kind of client message
-	std::unordered_map<int32_t, Message(*)(const Message&)> _msgFuncMapping;
+	std::unordered_map<int32_t, Message(*)(Server& server, Message&)> _msgFuncMapping;
 
 	MessageQueue _msgQueue;
 	bool _run = true;
 
 public:
-
 	MessageHandler(Server& server, Game& game);
 	~MessageHandler();
 
@@ -94,6 +95,6 @@ public:
 	void run();
 
 private:
-	Message processMessage(const Message& msg);
+	Message processMessage(Message& msg);
 };
 

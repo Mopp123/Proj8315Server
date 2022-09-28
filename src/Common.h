@@ -17,7 +17,7 @@
 #define USER_ID_LEN 32
 
 #define CLIENT_NAME_LEN 32
-#define NULL_CLIENT ClientData(0, "null")
+#define NULL_CLIENT ClientData(0, "null", 4)
 
 struct ClientData
 {
@@ -28,10 +28,14 @@ struct ClientData
 	int zPos = 0;
 	int observeRadius = 15;
 
-	ClientData(int connectionSD, const char* clientName):
+	ClientData(int connectionSD, const char* clientName, size_t nameLen):
 		connSD(connectionSD)
 	{
-		memcpy(name, clientName, sizeof(char) * CLIENT_NAME_LEN);
+		if (nameLen > CLIENT_NAME_LEN)
+			nameLen = CLIENT_NAME_LEN;
+
+		memset(name, 0, sizeof(char) * CLIENT_NAME_LEN);
+		memcpy(name, clientName, sizeof(char) * nameLen);
 	}
 
 	ClientData(const ClientData& other):

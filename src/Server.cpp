@@ -130,7 +130,8 @@ void Server::connectNewClient(int connSD)
 	Debug::log("Attempting to connect new client");
 	std::lock_guard<std::mutex> lock(_mutex);
 	// TODO: some kind of validation stuff..
-	ClientData newClient(connSD, "null");
+	std::string clientName = "null";
+	ClientData newClient(connSD, clientName.c_str(), clientName.size());
 	_clients.push_back(newClient);
 }
 

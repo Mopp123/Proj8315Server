@@ -12,7 +12,7 @@ namespace msgs
 		if(msgSize > MESSAGE_MIN_DATA_SIZE + 1)
 		{
 			std::string factionName(msg.accessData(), msgSize);
-			return Game::get()->addFaction(factionName.c_str());
+			return Game::get()->addFaction(factionName.c_str(), factionName.size());
 		}
 		else
 		{

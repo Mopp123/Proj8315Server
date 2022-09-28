@@ -33,20 +33,58 @@ Game::Game(int worldWidth) :
 	_objUpdater = new world::objects::ObjectUpdater(*this);
 
 	// *Initially we always need at least one "static-neutral" faction
-	Faction* neutralFaction = new Faction("Neutral");
+	const std::string neutralFactionName = "Neutral";
+	Faction* neutralFaction = new Faction(neutralFactionName.c_str(), neutralFactionName.size());
 	_factions.insert(std::make_pair(neutralFaction->getName(), neutralFaction));
 
 	// initialize object types "library"
 	// *JUST FOR TESTING ATM!
-	uint64_t testInitialObjState = 0;
-	world::set_tile_thingid(testInitialObjState, 1);
+	uint64_t treeObjInitialState = 0;
+	uint64_t moveObjInitialState = 0;
+	world::set_tile_thingid(treeObjInitialState, 1);
+	world::set_tile_thingid(moveObjInitialState, 2);
 	
-	_objectInfo.push_back({"Empty", "", 0, 0});
-	_objectInfo.push_back({"Tree1", "A testing tree object", 0, testInitialObjState});
-	_objectInfo.push_back({"Movement Test", "For testing movement stuff", 1, testInitialObjState});
+	std::string obj1_name = "Empty";
+	std::string obj1_description = "None";
 
-	// Testing movement with this obj
-	_objUpdater->spawnObject(50, 50, 2, neutralFaction);
+	std::string obj2_name = "Tree1";
+	std::string obj2_description = "A testing tree object";
+
+	std::string obj3_name = "Movement Test";
+	std::string obj3_description = "For testing movement stuff";
+	
+	_objectInfo.push_back(
+		{
+			obj1_name.c_str(), obj1_name.size(), 
+			obj1_description.c_str(), obj1_description.size(), 
+			0, 
+			0
+		}
+	);
+	_objectInfo.push_back(
+		{
+			obj2_name.c_str(), obj2_name.size(), 
+			obj2_description.c_str(), obj2_description.size(), 
+			0, 
+			treeObjInitialState
+		}
+	);
+	_objectInfo.push_back(
+		{
+			obj3_name.c_str(), obj3_name.size(), 
+			obj3_description.c_str(), obj3_description.size(), 
+			1, 
+			moveObjInitialState
+		}
+	);
+
+	// Testing movement with these objs
+	for (int i = 0; i < TEST_unitsCount; ++i)
+	{
+		int randX = std::rand() % _worldWidth;
+		int randY = std::rand() % _worldWidth;
+		_objUpdater->spawnObject(randX, randY, 2, neutralFaction);
+	}
 	
 	for (int y = 0; y < _worldWidth; ++y)
 	{
@@ -78,30 +116,34 @@ Game::~Game()
 
 void Game::run()
 {
-	world::objects::ObjectInstanceData* obj = _objUpdater->accessObject(0);
+	std::vector<world::objects::ObjectInstanceData*> testUnits;
+	for (int i = 0; i < TEST_unitsCount; ++i)
+		testUnits.push_back(_objUpdater->accessObject(i));
 
 	while(_run)
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
 		
-		if (obj->getActionQueue().size() < 2)
+		// Test updating some random actions for some units..
+		for (world::objects::ObjectInstanceData* obj : testUnits)
 		{
-			int r = (std::rand() % 8) + 1;
-			obj->addAction(r);
+			if (obj->getActionQueue().size() < 2)
+			{
+				int r = (std::rand() % 8) + 1;
+				obj->addAction(r);
+			}
 		}
 
 		_objUpdater->update();
 
 		std::chrono::time_point<std::chrono::high_resolution_clock> endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<float> delta = endTime - startTime ;
-		//Debug::log("Game update took: " + std::to_string(delta.count()));
 		_deltaTime = delta.count();
-
 		//Debug::log("Delta: " + std::to_string(_deltaTime));
 	}
 }
 
-Message Game::addFaction(const char* factionName)
+Message Game::addFaction(const char* factionName, size_t nameLen)
 {
 	std::lock_guard<std::mutex> lock(_mutex_faction);
 	std::string responseMessage;
@@ -112,7 +154,7 @@ Message Game::addFaction(const char* factionName)
 	auto iter = _factions.find(factionNameStr);
 	if(iter == _factions.end())
 	{
-		_factions.insert(std::make_pair(factionNameStr, new Faction(factionName)));
+		_factions.insert(std::make_pair(factionNameStr, new Faction(factionName, nameLen)));
 		responseMessage = "Success";
 		Debug::log("New faction created successfully(faction count: " + std::to_string(_factions.size()));
 	}

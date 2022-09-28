@@ -4,11 +4,14 @@
 #include <cstdint>
 #include <queue>
 #include <vector>
+
 #include "Action.h"
 #include "Common.h"
 #include "game/Faction.h"
 
+
 #define OBJECT_DATA_MAX_STRLEN 32
+
 
 namespace world
 {
@@ -27,16 +30,24 @@ namespace world
 			uint64_t initialState = 0;
 			
 			ObjectInfo(
-				const char* objName, 
-				const char* objDescription,
+				const char* objName, size_t nameLen,
+				const char* objDescription, size_t descriptionLen,
 				PK_ubyte speedVal,
 				uint64_t beginState
 			):
 				speed(speedVal),
 				initialState(beginState)
 			{
-				memcpy(name, objName, OBJECT_DATA_MAX_STRLEN);
-				memcpy(description, objDescription, OBJECT_DATA_MAX_STRLEN);
+				memset(name, 0, sizeof(char) * OBJECT_DATA_MAX_STRLEN);
+				memset(description, 0, sizeof(char) * OBJECT_DATA_MAX_STRLEN);
+				
+				if (nameLen > OBJECT_DATA_MAX_STRLEN)
+					nameLen = OBJECT_DATA_MAX_STRLEN;
+				if (descriptionLen > OBJECT_DATA_MAX_STRLEN)
+					descriptionLen = OBJECT_DATA_MAX_STRLEN;
+
+				memcpy(name, objName, sizeof(char) * nameLen);
+				memcpy(description, objDescription, sizeof(char) * descriptionLen);
 			}
 		
 			ObjectInfo(const ObjectInfo& other):

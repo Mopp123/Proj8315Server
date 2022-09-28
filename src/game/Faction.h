@@ -13,9 +13,12 @@ private:
 
 public:
 
-	Faction(const char* name)
+	Faction(const char* name, size_t nameLen)
 	{
-		memcpy(_name, name, FACTION_DATA_MAX_STRLEN);
+		if (nameLen > FACTION_DATA_MAX_STRLEN)
+			nameLen = FACTION_DATA_MAX_STRLEN;
+		memset(_name, 0, sizeof(char) * FACTION_DATA_MAX_STRLEN);
+		memcpy(_name, name, sizeof(char) * nameLen);
 	}
 	
 	Faction(const Faction& other) = delete;

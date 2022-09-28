@@ -16,7 +16,6 @@ class Message;
 class Game
 {
 private:
-
 	friend class world::objects::ObjectUpdater;
 
 	mutable std::mutex _mutex_faction;
@@ -37,15 +36,16 @@ private:
 
 	world::objects::ObjectUpdater* _objUpdater = nullptr;
 
-public:
+	const int TEST_unitsCount = 1000;
 
+public:
 	Game(int worldWidth);
 	Game(const Game&) = delete;
 	~Game();
 	
 	void run();
 
-	Message addFaction(const char* factionName);
+	Message addFaction(const char* factionName, size_t nameLen);
 	// Returns current "dynamic" world state
 	Message getWorldState(int xPos, int zPos, int observeRadius) const;
 	// Returns static object type info (may change only between server-restarting updates)

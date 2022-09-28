@@ -20,6 +20,8 @@ namespace world
 				{"speed", {1, 0.5f}}
 			};
 
+			// NOTE: These actions has nothing to do with the "tile state's current action"
+			// These are used to make more complex behaviours from those simple 3 bit - instructions
 			std::vector<Action*> _actionsMapping;
 
 	        public:

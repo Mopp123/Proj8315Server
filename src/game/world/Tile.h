@@ -36,7 +36,8 @@
 #define TILE_STATE_POS_customVar	28
 
 // Max values of specific properties
-#define TILE_STATE_MAX_terrElevation 7
+#define TILE_STATE_MAX_terrElevation 15
+#define TILE_STATE_MAX_action 7
 
 namespace world
 {

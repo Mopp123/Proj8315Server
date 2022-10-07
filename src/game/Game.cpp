@@ -38,45 +38,7 @@ Game::Game(int worldWidth) :
 	_factions.insert(std::make_pair(neutralFaction->getName(), neutralFaction));
 
 	// initialize object types "library"
-	// *JUST FOR TESTING ATM!
-	uint64_t treeObjInitialState = 0;
-	uint64_t moveObjInitialState = 0;
-	world::set_tile_thingid(treeObjInitialState, 1);
-	world::set_tile_thingid(moveObjInitialState, 2);
-	
-	std::string obj1_name = "Empty";
-	std::string obj1_description = "None";
-
-	std::string obj2_name = "Tree1";
-	std::string obj2_description = "A testing tree object";
-
-	std::string obj3_name = "Movement Test";
-	std::string obj3_description = "For testing movement stuff";
-	
-	_objectInfo.push_back(
-		{
-			obj1_name.c_str(), obj1_name.size(), 
-			obj1_description.c_str(), obj1_description.size(), 
-			0, 
-			0
-		}
-	);
-	_objectInfo.push_back(
-		{
-			obj2_name.c_str(), obj2_name.size(), 
-			obj2_description.c_str(), obj2_description.size(), 
-			0, 
-			treeObjInitialState
-		}
-	);
-	_objectInfo.push_back(
-		{
-			obj3_name.c_str(), obj3_name.size(), 
-			obj3_description.c_str(), obj3_description.size(), 
-			1, 
-			moveObjInitialState
-		}
-	);
+	_objectInfo = world::objects::load_obj_info_file("data/ObjectsConfig.txt");
 
 	// Testing movement with these objs
 	for (int i = 0; i < TEST_unitsCount; ++i)
@@ -97,9 +59,7 @@ Game::Game(int worldWidth) :
 			{
 				int diceThrow = std::rand() % 100;
 				if (diceThrow > 40)
-				{
 					_objUpdater->spawnObject(x, y, 1, neutralFaction);
-				}
 			}
 		}
 	}
@@ -205,21 +165,58 @@ Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 
 Message Game::getObjectInfo() const
 {
-	const size_t objSize = _objectInfo[0].getSize();
-	const size_t bufSize = _objectInfo.size() * objSize;
+	const size_t objSize = _objectInfo[0].getNetwSize();
+	const size_t totalBufSize = _objectInfo.size() * objSize;
 	
-	PK_byte* buffer = new PK_byte[bufSize];
-	memset(buffer, 0, bufSize);
+	PK_byte* buffer = new PK_byte[totalBufSize];
+	memset(buffer, 0, totalBufSize);
 
 	size_t bufPos = 0;
 	
 	for(const world::objects::ObjectInfo& objInfo : _objectInfo)
 	{
 		// *NOTE! Not sure if needing to lock to prevent nothing funny happening...
-		memcpy((void*)(buffer + bufPos), (const void*)(&objInfo), objSize);
+		// get name
+		memcpy(
+			(void*)(buffer + bufPos), 
+			(const void*)(&objInfo.name), 
+			OBJECT_DATA_STRLEN_NAME
+		);
+		// get desc
+		memcpy(
+			(void*)(buffer + bufPos + OBJECT_DATA_STRLEN_NAME), 
+			(const void*)(&objInfo.description), 
+			OBJECT_DATA_STRLEN_DESCRIPTION
+		);
+		// get action slots
+		for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
+		{
+			memcpy(
+				(void*)(buffer + 
+					bufPos + 
+					OBJECT_DATA_STRLEN_DESCRIPTION + 
+					(i * OBJECT_DATA_STRLEN_ACTION_NAME)
+				), 
+				(const void*)(&objInfo.actionSlot[i]), 
+				OBJECT_DATA_STRLEN_ACTION_NAME
+			);
+		}
+		const size_t bufPosBeginStats =
+			bufPos + 
+			OBJECT_DATA_STRLEN_NAME +
+			OBJECT_DATA_STRLEN_DESCRIPTION +
+			((TILE_STATE_MAX_action + 1) * OBJECT_DATA_STRLEN_ACTION_NAME
+		);
+		// get stats
+		// NOTE: At the moment all stats has to be single unsigned bytes
+		memcpy(
+			(void*)(buffer + bufPosBeginStats),
+			(const void*)(&objInfo.speed),
+			1
+		);
 		bufPos += objSize;
 	}
-	Message response(NULL_CLIENT, buffer, bufSize);
+	Message response(NULL_CLIENT, buffer, totalBufSize);
 	delete[] buffer;
 	return response;
 }

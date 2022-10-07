@@ -28,7 +28,9 @@ namespace world
 			ObjectUpdater(Game& gameRef);
 			~ObjectUpdater();
 	
-			void spawnObject(int x, int z, int objLibIndex, Faction* faction);
+
+			// Returns true if spawning was successful
+			bool spawnObject(int x, int z, int objLibIndex, Faction* faction);
 			inline ObjectInstanceData* accessObject(int index) { return _allObjects[index]; }
 	        protected:
 			virtual void updateFunc();

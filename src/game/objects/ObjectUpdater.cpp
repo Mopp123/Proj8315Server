@@ -39,15 +39,23 @@ namespace world
 				delete a;
 		}
 	
-	 	void ObjectUpdater::spawnObject(int x, int z, int objLibIndex, Faction* faction)
+	 	bool ObjectUpdater::spawnObject(int x, int z, int objLibIndex, Faction* faction)
 		{
 			const int tileIndex = x + z * _gameRef._worldWidth;
 			uint64_t originalState = _gameRef.getTileState(tileIndex);
-			// Add the "objects initial state" to the tile's original state (so all terrain-detail/effects/etc stuff may remain, if we want)
-			uint64_t newState = originalState | _gameRef._objectInfo[objLibIndex].initialState;
-			ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, faction);
-			_allObjects.push_back(newObj);
-			_gameRef.setTileState(tileIndex, newState);
+			if (!get_tile_thingid(originalState))
+			{
+				// Add the "objects initial state" to the tile's original state (so all terrain-detail/effects/etc stuff may remain, if we want)
+				uint64_t newState = originalState | _gameRef._objectInfo[objLibIndex].initialState;
+				ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, faction);
+				_allObjects.push_back(newObj);
+				_gameRef.setTileState(tileIndex, newState);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
 		}
 	
 	 	void ObjectUpdater::updateFunc()

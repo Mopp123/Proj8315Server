@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <string>
 #include <cstdint>
 #include <queue>
 #include <vector>
@@ -8,61 +9,96 @@
 #include "Action.h"
 #include "Common.h"
 #include "game/Faction.h"
+#include "game/world/Tile.h"
 
 
-#define OBJECT_DATA_MAX_STRLEN 32
+#define OBJECT_DATA_STRLEN_NAME 32
+#define OBJECT_DATA_STRLEN_DESCRIPTION 32
+#define OBJECT_DATA_STRLEN_ACTION_NAME 16
+
+#define OBJECT_DATA_COUNT_STATS 1
+#define OBJECT_DATA_COUNT_TOTAL ((1 + 1) + (TILE_STATE_MAX_action + 1) + OBJECT_DATA_COUNT_STATS)
 
 
 namespace world
 {
 	namespace objects
 	{
-		// abstract base class of every possible game object type (prev. this was called "thing")
+		// Contains static info of a game object type (prev. this was called "thing")
 		struct ObjectInfo
 		{
 			// misc. stuff
-			char name[OBJECT_DATA_MAX_STRLEN];
-			char description[OBJECT_DATA_MAX_STRLEN];
+			char name[OBJECT_DATA_STRLEN_NAME];
+			char description[OBJECT_DATA_STRLEN_DESCRIPTION];
 			
+			char actionSlot[TILE_STATE_MAX_action + 1][OBJECT_DATA_STRLEN_ACTION_NAME];
+
 			// stats
 			PK_ubyte speed;
 
 			uint64_t initialState = 0;
 			
 			ObjectInfo(
-				const char* objName, size_t nameLen,
-				const char* objDescription, size_t descriptionLen,
+				const std::string& objName,
+				const std::string& objDescription,
+				std::vector<std::string>& actionSlots,
 				PK_ubyte speedVal,
 				uint64_t beginState
 			):
 				speed(speedVal),
 				initialState(beginState)
 			{
-				memset(name, 0, sizeof(char) * OBJECT_DATA_MAX_STRLEN);
-				memset(description, 0, sizeof(char) * OBJECT_DATA_MAX_STRLEN);
+				memset(name, 0, sizeof(char) * OBJECT_DATA_STRLEN_NAME);
+				memset(description, 0, sizeof(char) * OBJECT_DATA_STRLEN_DESCRIPTION);
 				
-				if (nameLen > OBJECT_DATA_MAX_STRLEN)
-					nameLen = OBJECT_DATA_MAX_STRLEN;
-				if (descriptionLen > OBJECT_DATA_MAX_STRLEN)
-					descriptionLen = OBJECT_DATA_MAX_STRLEN;
+				
+				size_t nameLen = objName.size();
+				size_t descriptionLen = objDescription.size();
 
-				memcpy(name, objName, sizeof(char) * nameLen);
-				memcpy(description, objDescription, sizeof(char) * descriptionLen);
+				if (nameLen > OBJECT_DATA_STRLEN_NAME)
+					nameLen = OBJECT_DATA_STRLEN_NAME;
+				if (descriptionLen > OBJECT_DATA_STRLEN_DESCRIPTION)
+					descriptionLen = OBJECT_DATA_STRLEN_DESCRIPTION;
+
+				memcpy(name, objName.c_str(), sizeof(char) * nameLen);
+				memcpy(description, objDescription.c_str(), sizeof(char) * descriptionLen);
+
+				for (size_t i = 0; i < TILE_STATE_MAX_action + 1; ++i)
+				{
+					memset(actionSlot[i], 0, sizeof(char) * OBJECT_DATA_STRLEN_ACTION_NAME);
+					if (i < actionSlots.size())
+					{
+						const std::string& slotName = actionSlots[i];
+						size_t slotLen = slotName.size();
+						if (slotLen > OBJECT_DATA_STRLEN_ACTION_NAME)
+							slotLen = OBJECT_DATA_STRLEN_ACTION_NAME;
+
+						memcpy(actionSlot[i], slotName.c_str(), sizeof(char) * slotLen);
+					}
+				}
 			}
 		
 			ObjectInfo(const ObjectInfo& other):
 				speed(other.speed),
 				initialState(other.initialState)
 			{
-				memcpy(name, other.name, OBJECT_DATA_MAX_STRLEN);
-				memcpy(description, other.description, OBJECT_DATA_MAX_STRLEN);
+				memcpy(name, other.name, OBJECT_DATA_STRLEN_NAME);
+				memcpy(description, other.description, OBJECT_DATA_STRLEN_DESCRIPTION);
+				for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
+					memcpy(actionSlot[i], other.actionSlot[i], OBJECT_DATA_STRLEN_ACTION_NAME);
 			}
-		
-			size_t getSize() const
+
+			// Returns the size of data to be sent to clients
+			size_t getNetwSize() const
 			{
-				return 1 + ((OBJECT_DATA_MAX_STRLEN) * 2);
+				size_t combinedStrLen = (OBJECT_DATA_STRLEN_NAME + OBJECT_DATA_STRLEN_DESCRIPTION);
+				for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
+					combinedStrLen += OBJECT_DATA_STRLEN_ACTION_NAME;
+				return combinedStrLen + 1;
 			}
 		};
+
+		std::vector<ObjectInfo> load_obj_info_file(const std::string& filePath);
 
 
 		class ObjectInstanceData

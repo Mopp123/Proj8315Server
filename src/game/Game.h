@@ -66,7 +66,4 @@ public:
 		int index = x + z * _worldWidth;
 		return index >= 0 && index < _worldWidth * _worldWidth;
       	}
-
-private:
-
 };

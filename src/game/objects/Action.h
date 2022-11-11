@@ -8,8 +8,6 @@
 #define ACTION_STATUS_SUCCESS 1
 #define ACTION_STATUS_FAILURE 2
 
-#define ACTION_IDLE 	0
-#define ACTION_MOVE 	1
 
 namespace world
 {

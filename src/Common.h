@@ -16,7 +16,9 @@
 
 #define USER_ID_LEN 32
 
-#define CLIENT_NAME_LEN 32
+#define CLIENT_NAME_LEN 	32
+#define USER_NAME_LEN 		32
+#define USER_PASSWD_LEN 	32
 #define NULL_CLIENT ClientData(0, "null", 4)
 
 struct ClientData
@@ -27,6 +29,8 @@ struct ClientData
 	int xPos = 0;
 	int zPos = 0;
 	int observeRadius = 15;
+
+	bool loggedIn = false;
 
 	ClientData(int connectionSD, const char* clientName, size_t nameLen):
 		connSD(connectionSD)

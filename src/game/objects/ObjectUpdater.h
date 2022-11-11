@@ -8,32 +8,28 @@
 
 namespace world
 {
-	namespace objects
-	{
-	        class ObjectUpdater : public StateUpdater
-	        {
-		private:
-			std::vector<ObjectInstanceData*> _allObjects;
-	
-			const std::unordered_map<const char*, std::pair<int ,float>> _statFloatMapping = 
-			{
-				{"speed", {1, 0.5f}}
-			};
+    namespace objects
+    {
+        class ObjectUpdater : public StateUpdater
+        {
+        private:
+            std::vector<ObjectInstanceData*> _allObjects;
+        
+            // NOTE: These actions has nothing to do with the "tile state's current action"
+            // These are used to make more complex behaviours from those simple 3 bit - instructions
+            std::vector<Action*> _actionsMapping;
+        
+        public:
+            ObjectUpdater(Game& gameRef);
+            ~ObjectUpdater();
 
-			// NOTE: These actions has nothing to do with the "tile state's current action"
-			// These are used to make more complex behaviours from those simple 3 bit - instructions
-			std::vector<Action*> _actionsMapping;
-
-	        public:
-			ObjectUpdater(Game& gameRef);
-			~ObjectUpdater();
-	
-
-			// Returns true if spawning was successful
-			bool spawnObject(int x, int z, int objLibIndex, Faction* faction);
-			inline ObjectInstanceData* accessObject(int index) { return _allObjects[index]; }
-	        protected:
-			virtual void updateFunc();
-	        };
-	}
+            // Returns true if spawning was successful
+            bool spawnObject(int x, int z, int objLibIndex, Faction* faction);
+            ObjectInstanceData* accessObject(int index);
+            inline std::vector<ObjectInstanceData*>& accessObjects() { return _allObjects; }
+            inline size_t getObjectCount() const { return _allObjects.size(); }
+        protected:
+            virtual void updateFunc();
+        };
+    }
 }

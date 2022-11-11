@@ -19,11 +19,14 @@
 
 #define NULL_MESSAGE Message(NULL_CLIENT, nullptr, 0)
 
-#define MESSAGE_TYPE__GetServerMessage          0x1                                          
-#define MESSAGE_TYPE__CreateFaction             0x2                                          
-#define MESSAGE_TYPE__GetWorldState             0x3                                          
-#define MESSAGE_TYPE__UpdateObserverProperties 	0x4                                          
-#define MESSAGE_TYPE__ServerShutdown            0x5 
+#define MESSAGE_TYPE__GetServerMessage          0x1
+#define MESSAGE_TYPE__UserLogin            		0x2
+#define MESSAGE_TYPE__UserLogout            	0x3
+#define MESSAGE_TYPE__GetObjInfoLib             0x4
+#define MESSAGE_TYPE__CreateFaction             0x5
+#define MESSAGE_TYPE__GetWorldState             0x6
+#define MESSAGE_TYPE__UpdateObserverProperties 	0x7
+#define MESSAGE_TYPE__ServerShutdown            0x8
 
 
 class Message
@@ -46,7 +49,9 @@ public:
 	
 	bool operator==(const Message& other)
 	{
-		return (_client == other._client) && (_dataLen == other._dataLen) && (memcmp(_pData, other._pData, _dataLen));
+		return (_client == other._client) && 
+			(_dataLen == other._dataLen) && 
+			(memcmp(_pData, other._pData, _dataLen));
 	}
 
 	bool operator!=(const Message& other)
@@ -71,6 +76,7 @@ public:
 
 
 class Server;
+
 
 class MessageHandler
 {

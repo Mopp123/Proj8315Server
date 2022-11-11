@@ -92,11 +92,13 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
 	_pRecvBuf = new PK_byte[_maxRecvBufLen];
 	memset(_pRecvBuf, 0, _maxRecvBufLen);
 
-	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFaction, msgs::msg_createNewFaction));
-	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetServerMessage, msgs::msg_getServerMessage));
-	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::msg_updateObserver));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetServerMessage, msgs::get_server_message));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserLogin, msgs::user_login));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetObjInfoLib, msgs::fetch_obj_type_lib));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFaction, msgs::create_new_faction));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
 	//_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));
-	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::msg_serverShutdown));
+	_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::server_shutdown));
 }
 
 MessageHandler::~MessageHandler()
@@ -128,6 +130,7 @@ void MessageHandler::run()
 				Message response = processMessage(msg);
 				if (response != NULL_MESSAGE)
 				{
+					Debug::log("SENDING WITH SIZE: " + std::to_string(response.getSize()));
 					ssize_t sentBytes = send(msg.getClient().connSD, response.accessData(), response.getSize(), MSG_NOSIGNAL);
 					if (sentBytes < 0)
 						Debug::log("ERROR ON SENDING!");
@@ -148,6 +151,9 @@ void MessageHandler::run()
 Message MessageHandler::processMessage(Message& msg)
 {
 	const int32_t msgType = msg.getType();
+
+	Debug::log("___TEST___received message of type: " + std::to_string(msgType));
+
 	auto iter = _msgFuncMapping.find(msgType);
 	if(iter != _msgFuncMapping.end())
 	{

@@ -3,10 +3,55 @@
 #include "Server.h"
 #include "game/Game.h"
 #include "General.h"
+#include "game/objects/Object.h"
+
 
 namespace msgs
 {
-	Message msg_createNewFaction(Server& server, Message& msg)
+	Message get_server_message(Server& server, Message& msg)
+	{
+		std::string message = "Welcome! Testing testing...";
+		return Message(NULL_CLIENT, message.data(), message.size());
+	}
+
+
+	Message user_login(Server& server, Message& msg)
+	{
+		const size_t msgSize = msg.getSize();
+		if(msgSize >= MESSAGE_MIN_DATA_SIZE + USER_NAME_LEN + USER_PASSWD_LEN)
+		{
+			const size_t dataBeginPos = MESSAGE_MIN_DATA_SIZE;
+			PK_byte* data = msg.accessData();
+			std::string usrName(data + dataBeginPos);
+			std::string password(data + dataBeginPos + USER_PASSWD_LEN);
+			const PK_byte success = server.validateCredentials(usrName, password);
+			PK_byte respData[MESSAGE_MIN_DATA_SIZE + 1];
+			
+			const int32_t messageType = MESSAGE_TYPE__UserLogin;
+			memcpy(respData, &messageType, sizeof(int32_t));
+			memcpy(respData + sizeof(int32_t), &success, 1);
+
+			bool test = false;
+			memcpy(&test, respData + sizeof(int32_t), 1);
+			
+			Debug::log("___TEST___login status: " + std::to_string(test));
+			
+			return Message(NULL_CLIENT, respData, sizeof(int32_t) + 1);
+		}
+		else
+		{
+			return NULL_MESSAGE;
+		}
+	}
+
+
+	Message fetch_obj_type_lib(Server& server, Message& msg)
+	{
+		return Game::get()->getObjInfoLibMsg();
+	}
+
+
+	Message create_new_faction(Server& server, Message& msg)
 	{
 		const size_t msgSize = msg.getSize();
 		if(msgSize > MESSAGE_MIN_DATA_SIZE + 1)
@@ -19,16 +64,9 @@ namespace msgs
 			return NULL_MESSAGE;
 		}
 	}
-        
-	
-	Message msg_getServerMessage(Server& server, Message& msg)
-	{
-		std::string message = "Welcome! Testing testing...";
-		return Message(NULL_CLIENT, message.data(), message.size());
-	}
 
 
-	Message msg_updateObserver(Server& server, Message& msg)
+	Message update_observer(Server& server, Message& msg)
 	{
 		const size_t msgSize = msg.getSize();
 		if(msgSize == sizeof(int32_t) * 4)
@@ -49,7 +87,7 @@ namespace msgs
 	}
 
 
-	Message msg_serverShutdown(Server& server, Message& msg)
+	Message server_shutdown(Server& server, Message& msg)
 	{
 		Server::trigger_shutdown();
 		std::string message = "Shutdown triggered";

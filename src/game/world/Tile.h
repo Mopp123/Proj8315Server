@@ -61,11 +61,11 @@ namespace world
 	{
 		TILE_STATE_actionIdle = 	0,
 		TILE_STATE_actionMove = 	1,
-		TILE_STATE_actionClassAction1 = 2,
-		TILE_STATE_actionClassAction2 = 3,
+		TILE_STATE_actionMoveVertical = 2,
+		TILE_STATE_actionClassAction1 = 3,
+		TILE_STATE_actionClassAction2 = 4,
 
 		// Not decided yet, what would these be? ( these are also available values to use..)
-		TILE_STATE_actionPENDING1 = 4,
 		TILE_STATE_actionPENDING2 = 5,
 		TILE_STATE_actionPENDING3 = 6,
 		TILE_STATE_actionPENDING4 = 7,

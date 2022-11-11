@@ -1,10 +1,6 @@
-
 #include "Game.h"
 #include "../Common.h"
 #include "MessageHandler.h"
-#include <cstring>
-#include <mutex>
-#include <unordered_set>
 
 #include "objects/Object.h"
 #include "objects/ObjectUpdater.h"
@@ -12,6 +8,9 @@
 #include "world/WorldGenerator.h"
 #include "../Debug.h"
 
+#include <cstring>
+#include <mutex>
+#include <unordered_set>
 #include <chrono>
 
 
@@ -34,19 +33,26 @@ Game::Game(int worldWidth) :
 
 	// *Initially we always need at least one "static-neutral" faction
 	const std::string neutralFactionName = "Neutral";
+	PK_ubyte neutralDeployments[FACTION_DATA_MAX_DEPLOY_COUNT];
+	memset(neutralDeployments, 2, FACTION_DATA_MAX_DEPLOY_COUNT);
 	Faction* neutralFaction = new Faction(neutralFactionName.c_str(), neutralFactionName.size());
+	neutralFaction->setDeployments(neutralDeployments, FACTION_DATA_MAX_DEPLOY_COUNT);
 	_factions.insert(std::make_pair(neutralFaction->getName(), neutralFaction));
 
 	// initialize object types "library"
 	_objectInfo = world::objects::load_obj_info_file("data/ObjectsConfig.txt");
+	// determine total size of the objLib in bytes
+	_totalObjInfoSize = _objectInfo.size() * world::objects::get_netw_objinfo_size();
+	_objInfoInitialized = true;
 
 	// Testing movement with these objs
-	for (int i = 0; i < TEST_unitsCount; ++i)
-	{
-		int randX = std::rand() % _worldWidth;
-		int randY = std::rand() % _worldWidth;
-		_objUpdater->spawnObject(randX, randY, 2, neutralFaction);
-	}
+	//for (int i = 0; i < 1000; ++i)
+	//{
+	//	int randX = std::rand() % _worldWidth;
+	//	int randY = std::rand() % _worldWidth;
+	//	if (_objUpdater->spawnObject(randX, randY, 2, neutralFaction))
+	//		_testUnits.push_back(_objUpdater->accessObject(_objUpdater->accessObjects().size() - 1));
+	//}
 	
 	for (int y = 0; y < _worldWidth; ++y)
 	{
@@ -76,16 +82,14 @@ Game::~Game()
 
 void Game::run()
 {
-	std::vector<world::objects::ObjectInstanceData*> testUnits;
-	for (int i = 0; i < TEST_unitsCount; ++i)
-		testUnits.push_back(_objUpdater->accessObject(i));
-
+	const float test_maxShipSpawnCd = 0.01f;
+	float test_shipSpawnCd = 0.0f;
 	while(_run)
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
 		
 		// Test updating some random actions for some units..
-		for (world::objects::ObjectInstanceData* obj : testUnits)
+		for (world::objects::ObjectInstanceData* obj : _testUnits)
 		{
 			if (obj->getActionQueue().size() < 2)
 			{
@@ -93,6 +97,28 @@ void Game::run()
 				obj->addAction(r);
 			}
 		}
+		// Test spawning players' ships and deploying initial units/objects
+		if (test_shipSpawnCd <= 0.0f)
+		{
+			const int descentAction = 10;
+			const int deployAction = 11;
+			int randX = std::rand() % _worldWidth;
+			int randZ = std::rand() % _worldWidth;
+			
+			bool spawned = _objUpdater->spawnObject(randX, randZ, 3, _factions["Neutral"]);
+			if (spawned)
+			{
+				world::objects::ObjectInstanceData* shipObj = _objUpdater->accessObject(_objUpdater->accessObjects().size() - 1);
+				shipObj->addAction(descentAction);
+				shipObj->addAction(deployAction);
+				test_shipSpawnCd = test_maxShipSpawnCd;
+			}
+		}
+		else
+		{
+			test_shipSpawnCd -= 1.0f * _deltaTime;
+		}
+		
 
 		_objUpdater->update();
 
@@ -103,6 +129,7 @@ void Game::run()
 	}
 }
 
+// NOTE!! DOESNT WORK ATM. Need to add message type to msgbuffer!
 Message Game::addFaction(const char* factionName, size_t nameLen)
 {
 	std::lock_guard<std::mutex> lock(_mutex_faction);
@@ -163,15 +190,23 @@ Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 	return response;
 }
 
-Message Game::getObjectInfo() const
+Message Game::getObjInfoLibMsg() const
 {
-	const size_t objSize = _objectInfo[0].getNetwSize();
-	const size_t totalBufSize = _objectInfo.size() * objSize;
+	if (!_objInfoInitialized)
+	{
+		Debug::log("Attempted to access object info library before it was initialized!");
+		return NULL_MESSAGE;
+	}
+	size_t bufSize = sizeof(int32_t) + _totalObjInfoSize;
+	size_t objSize = world::objects::get_netw_objinfo_size();
+	PK_byte* buffer = new PK_byte[bufSize];
+	memset(buffer, 0, bufSize);
 	
-	PK_byte* buffer = new PK_byte[totalBufSize];
-	memset(buffer, 0, totalBufSize);
+	// Set first 4 bytes to contain message type name
+	const int32_t messageType = MESSAGE_TYPE__GetObjInfoLib;
+	memcpy(buffer, (const void*)&messageType, sizeof(int32_t));
 
-	size_t bufPos = 0;
+	size_t bufPos = sizeof(int32_t);
 	
 	for(const world::objects::ObjectInfo& objInfo : _objectInfo)
 	{
@@ -194,6 +229,7 @@ Message Game::getObjectInfo() const
 			memcpy(
 				(void*)(buffer + 
 					bufPos + 
+					OBJECT_DATA_STRLEN_NAME +
 					OBJECT_DATA_STRLEN_DESCRIPTION + 
 					(i * OBJECT_DATA_STRLEN_ACTION_NAME)
 				), 
@@ -216,9 +252,37 @@ Message Game::getObjectInfo() const
 		);
 		bufPos += objSize;
 	}
-	Message response(NULL_CLIENT, buffer, totalBufSize);
+	Message response(NULL_CLIENT, buffer, bufSize);
 	delete[] buffer;
 	return response;
+}
+
+const std::vector<world::objects::ObjectInfo>& Game::getObjInfoLib()
+{
+	// NOTE: Not sure should we lock here, since the "objTypeLib" is constant
+	return _objectInfo;
+}
+
+const world::objects::ObjectInfo& Game::getObjInfo(int index) const
+{
+	if (index >= 0 && index < (int)_objectInfo.size())
+	{
+		return _objectInfo[index];
+	}
+	else
+	{
+		Debug::log("@Game::getObjInfo(int) Accessed invalid obj info lib index");
+		return _objectInfo[0]; // index 0 should ALWAYS be "empty object"
+	}
+}
+
+const Faction* Game::getFaction(const std::string& name)
+{
+	std::unordered_map<std::string, Faction*>::iterator it = _factions.find(name);
+	if (it != _factions.end())
+		return (*it).second;
+	else
+		return nullptr;
 }
 
 uint64_t Game::getTileState(int xPos, int zPos) const

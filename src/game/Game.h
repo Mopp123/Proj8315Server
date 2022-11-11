@@ -23,6 +23,14 @@ private:
 
 	std::unordered_map<std::string, Faction*> _factions;
 	std::vector<world::objects::ObjectInfo> _objectInfo;
+	std::unordered_map<std::string, std::vector<float>> _statFloatMapping = 
+	{
+		{"speed", {0.0f, 0.5f, 1.0f}}
+	};
+
+	// size of the whole objInfoLib in bytes
+	size_t _totalObjInfoSize = 0;
+	bool _objInfoInitialized = false;
 
 	int _worldWidth = 32;
 	float _updateInterval = 0.25f;
@@ -36,7 +44,7 @@ private:
 
 	world::objects::ObjectUpdater* _objUpdater = nullptr;
 
-	const int TEST_unitsCount = 1000;
+	std::vector<world::objects::ObjectInstanceData*> _testUnits;
 
 public:
 	Game(int worldWidth);
@@ -48,8 +56,11 @@ public:
 	Message addFaction(const char* factionName, size_t nameLen);
 	// Returns current "dynamic" world state
 	Message getWorldState(int xPos, int zPos, int observeRadius) const;
-	// Returns static object type info (may change only between server-restarting updates)
-	Message getObjectInfo() const;
+	// Returns message containing static object info (may change only between server-restarting updates)
+	Message getObjInfoLibMsg() const;
+	const std::vector<world::objects::ObjectInfo>& getObjInfoLib();
+	const world::objects::ObjectInfo& getObjInfo(int index) const;
+	const Faction* getFaction(const std::string& name);
 	
 	uint64_t getTileState(int xPos, int zPos) const;
 	uint64_t getTileState(int index) const;
@@ -61,6 +72,7 @@ public:
 	static Game* get();
 	
 	inline const std::vector<world::objects::ObjectInfo>& getObjLib() const { return _objectInfo; }
+	inline std::unordered_map<std::string, std::vector<float>>& getStatFloatMapping() { return _statFloatMapping; }
 	inline bool validCoords(int x, int z) const 
 	{
 		int index = x + z * _worldWidth;

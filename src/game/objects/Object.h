@@ -6,6 +6,7 @@
 #include <queue>
 #include <vector>
 
+#include "Debug.h"
 #include "Action.h"
 #include "Common.h"
 #include "game/Faction.h"
@@ -87,17 +88,11 @@ namespace world
 				for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
 					memcpy(actionSlot[i], other.actionSlot[i], OBJECT_DATA_STRLEN_ACTION_NAME);
 			}
-
-			// Returns the size of data to be sent to clients
-			size_t getNetwSize() const
-			{
-				size_t combinedStrLen = (OBJECT_DATA_STRLEN_NAME + OBJECT_DATA_STRLEN_DESCRIPTION);
-				for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
-					combinedStrLen += OBJECT_DATA_STRLEN_ACTION_NAME;
-				return combinedStrLen + 1;
-			}
 		};
 
+
+		// Returns the size of data moving accross netw (excludes server and client specific data)
+		size_t get_netw_objinfo_size();
 		std::vector<ObjectInfo> load_obj_info_file(const std::string& filePath);
 
 
@@ -107,6 +102,7 @@ namespace world
 			int _x = 0;
 			int _z = 0;
 			uint64_t _state = 0;
+			PK_ubyte _objType = 0;
 			std::queue<int> _actionQueue;
 			Faction* _pFaction;
 
@@ -116,7 +112,9 @@ namespace world
 		public:
 			ObjectInstanceData(int x, int z, uint64_t currentState, Faction* pFaction) :
 				_x(x), _z(z), _state(currentState), _pFaction(pFaction)
-			{}
+			{
+				_objType = get_tile_thingid(currentState);
+			}
 			ObjectInstanceData(const ObjectInstanceData& other) = delete;
 			
 			~ObjectInstanceData()
@@ -128,11 +126,16 @@ namespace world
 				_z = z; 
 				_state = tileState;
 			}
-			void setState(uint64_t state) { _state = state; }
+			void setState(uint64_t state) 
+			{ 
+				_state = state; 
+				_objType = get_tile_thingid(_state);
+			}
 
 			int getX() const { return _x; }
 			int getZ() const { return _z; }
 			uint64_t getTileState() const { return _state; }
+			uint64_t getObjType() const { return _objType; }
 			float& accessActionProgress() { return _actionProgress; }
 			
 			std::queue<int>& getActionQueue() { return _actionQueue; }

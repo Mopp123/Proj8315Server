@@ -51,6 +51,8 @@ public:
 	// Returns vector containing each connection sock. desc. (Thread safely)
 	std::vector<ClientData> getClientConnections() const;
 
+	bool validateCredentials(const std::string& username, const std::string& password) const;
+
 	static void trigger_shutdown();
 	static bool is_shutting_down();
 };

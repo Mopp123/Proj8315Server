@@ -1,4 +1,3 @@
-
 #include "ObjectUpdater.h"
 #include "game/Game.h"
 #include "game/StateUpdater.h"
@@ -8,6 +7,8 @@
 
 #include "actions/MovementActions.h"
 #include "actions/CommonActions.h"
+#include "actions/ClassActions.h"
+
 
 namespace world
 {
@@ -26,8 +27,14 @@ namespace world
 				new actions::Move(TileStateDirection::TILE_STATE_dirS), 
 				new actions::Move(TileStateDirection::TILE_STATE_dirSW), 
 				new actions::Move(TileStateDirection::TILE_STATE_dirW), 
-				new actions::Move(TileStateDirection::TILE_STATE_dirNW)
+				new actions::Move(TileStateDirection::TILE_STATE_dirNW),
+
+				new actions::MoveVertical(TileStateDirection::TILE_STATE_dirN),
+				new actions::MoveVertical(TileStateDirection::TILE_STATE_dirS),
+				
+				new actions::ClassAction0(*this)
 			};
+
 		}
 	
 		ObjectUpdater::~ObjectUpdater()
@@ -41,20 +48,48 @@ namespace world
 	
 	 	bool ObjectUpdater::spawnObject(int x, int z, int objLibIndex, Faction* faction)
 		{
-			const int tileIndex = x + z * _gameRef._worldWidth;
-			uint64_t originalState = _gameRef.getTileState(tileIndex);
-			if (!get_tile_thingid(originalState))
+			// *Don't allow spawning "empty" objects accidentally
+			if (objLibIndex == 0)
 			{
-				// Add the "objects initial state" to the tile's original state (so all terrain-detail/effects/etc stuff may remain, if we want)
-				uint64_t newState = originalState | _gameRef._objectInfo[objLibIndex].initialState;
-				ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, faction);
-				_allObjects.push_back(newObj);
-				_gameRef.setTileState(tileIndex, newState);
-				return true;
+				Debug::log("Attempted to spawn empty object");
+				return false;
+			}
+			const int worldWidth = _gameRef._worldWidth;
+			const int tileIndex = x + z * worldWidth;
+			if (tileIndex >= 0 && tileIndex < (worldWidth * worldWidth))
+			{
+				uint64_t originalState = _gameRef.getTileState(tileIndex);
+				if (!get_tile_thingid(originalState))
+				{
+					// Add the "objects initial state" to the tile's original state (so all terrain-detail/effects/etc stuff may remain, if we want)
+					uint64_t newState = originalState | _gameRef._objectInfo[objLibIndex].initialState;
+					ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, faction);
+					_allObjects.push_back(newObj);
+					_gameRef.setTileState(tileIndex, newState);
+					return true;
+				}
+				else
+				{
+					return false;
+				}
 			}
 			else
 			{
+				//Debug::log("Attempted to spawn object outside of map bounds!");
 				return false;
+			}
+		}
+
+		ObjectInstanceData* ObjectUpdater::accessObject(int index)
+		{
+			if (index >= 0 && index < (int)_allObjects.size())
+			{
+				return _allObjects[index];
+			}
+			else
+			{
+				Debug::log("Attempted to access object but index was out of bounds");
+				return nullptr;
 			}
 		}
 	
@@ -66,7 +101,7 @@ namespace world
 				
 				// *Make sure we always have at least idle action going on (currently illegal to ever have empty action queue)
 				if (actionQueue.empty())
-					actionQueue.push(ACTION_IDLE);
+					actionQueue.push(TileStateAction::TILE_STATE_actionIdle);
 
 				const int currentActionID = actionQueue.front();
 				PK_ubyte actionStatus = _actionsMapping[currentActionID]->run(obj, _gameRef._pWorld, _gameRef._worldWidth);
@@ -90,4 +125,4 @@ namespace world
 			}
 		}
 	}
-}
+};

@@ -1,6 +1,9 @@
-
 #include "CommonActions.h"
+#include "Debug.h"
+#include "game/Game.h"
 #include "game/objects/Object.h"
+#include "game/world/Tile.h"
+
 
 namespace world
 {

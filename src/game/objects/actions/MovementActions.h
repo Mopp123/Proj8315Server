@@ -17,9 +17,16 @@ namespace world
 			public:
 				Move(PK_ubyte direction);
 				virtual PK_ubyte run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth);
+			};
 
+			class MoveVertical : public Action
+			{
 			private:
-				bool validateMove(uint64_t targetTileState);
+				// Movement direction
+				PK_ubyte _dir;
+			public:
+				MoveVertical(PK_ubyte direction);
+				virtual PK_ubyte run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth);
 			};
 		}
 	}

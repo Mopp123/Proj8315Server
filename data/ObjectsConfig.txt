@@ -1,4 +1,3 @@
-0
 Empty
 
 
@@ -11,7 +10,6 @@ Empty
 
 0
 ---
-1
 Tree1
 Testing tree object here...
 
@@ -24,7 +22,6 @@ Testing tree object here...
 
 0
 ---
-2
 Movement Test
 For testing movement stuff
 
@@ -35,5 +32,17 @@ For testing movement stuff
 
 
 
-1
+2
+---
+Ship Test
+For testing ship landing
+Deploy
+
+
+
+
+
+
+
+2
 ---

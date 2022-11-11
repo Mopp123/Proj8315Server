@@ -11,6 +11,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <string>
+#include <fstream>
+#include <stdexcept>
 
 #include "Server.h"
 #include "Debug.h"
@@ -119,10 +121,47 @@ void Server::shutdown()
 	close(_serverSD);
 }
 
+std::vector<ClientData> Server::getClientConnections() const
+{
+	std::lock_guard<std::mutex> lock(_mutex);
+	std::vector<ClientData> clientList(_clients);
+	return clientList;
+}
+
+bool Server::validateCredentials(const std::string& username, const std::string& password) const
+{
+	const std::string filePath = "../usr-data.txt";
+	std::fstream fileStream(filePath);
+	if (!fileStream.is_open())
+		throw std::runtime_error("Failed to open obj info file from: " + filePath);
+	std::string line;
+	/* Current obj info schema in the config file:
+		name;passwd
+	*/
+	const std::string delim = ";";
+	const std::string combinedUserCreds = username + delim + password;
+	bool isValid = false;
+	while (std::getline(fileStream, line))
+	{
+		if (line == combinedUserCreds)
+		{
+			isValid = true;
+			break;
+		}
+	}
+	fileStream.close();
+	return isValid;
+}
+
 void Server::trigger_shutdown()
 {
 	s_shutdown = true;
 	Debug::log("Server shutdown triggered");
+}
+
+bool Server::is_shutting_down()
+{
+	return s_shutdown;
 }
 
 void Server::connectNewClient(int connSD)
@@ -165,14 +204,3 @@ void Server::updateClientData(const ClientData& toUpdate, int32_t xPos, int32_t 
 	}
 }
 
-std::vector<ClientData> Server::getClientConnections() const
-{
-	std::lock_guard<std::mutex> lock(_mutex);
-	std::vector<ClientData> clientList(_clients);
-	return clientList;
-}
-
-bool Server::is_shutting_down()
-{
-	return s_shutdown;
-}

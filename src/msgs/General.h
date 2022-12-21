@@ -9,10 +9,10 @@ class Server;
 
 namespace msgs
 {
-	Message get_server_message(Server& server, Message& msg);
-	Message user_login(Server& server, Message& msg);
-	Message fetch_obj_type_lib(Server& server, Message& msg);
-	Message create_new_faction(Server& server, Message& msg);
-	Message update_observer(Server& server, Message& msg);
-	Message server_shutdown(Server& server, Message& msg);
+    Message get_server_message(Server& server, Message& msg);
+    Message user_login(Server& server, Message& msg);
+    Message fetch_obj_type_lib(Server& server, Message& msg);
+    Message create_new_faction(Server& server, Message& msg);
+    Message update_observer(Server& server, Message& msg);
+    Message server_shutdown(Server& server, Message& msg);
 }

@@ -1,163 +1,162 @@
-
 #include "Server.h"
 
 
 int main(const int argc, const char** argv)
 {
-	Server server(51422, 1024);
+    Server server(51422, 1024);
 
-	server.beginMsgHandler();
-	server.beginGame();
+    server.beginMsgHandler();
+    server.beginGame();
 
-	while(!server.is_shutting_down())
-	{
-		server.run();
-	}
-	server.shutdown();
+    while(!server.is_shutting_down())
+    {
+        server.run();
+    }
+    server.shutdown();
 
-	Debug::log("SHUTTING DOWN!!!");
+    Debug::log("SHUTTING DOWN!!!");
 
-	return 0;
+    return 0;
 }
 
 
 /*
-int main(int argc, char *argv[])
+   int main(int argc, char *argv[])
+   {
+   int socketFd;
+   int port = 51421;	
+
+   const int maxClientCount = 1024;
+   int clientfds[maxClientCount];
+   memset(clientfds, 0, sizeof(int) * maxClientCount);
+
+   fd_set readfds;
+
+
+   socklen_t clientLen;
+
+   size_t maxRecvBufSize = 512;
+   char receiveBuffer[maxRecvBufSize];
+
+   struct sockaddr_in serverAddress;
+   struct sockaddr_in clientAddress;
+
+   socketFd = socket(AF_INET, SOCK_STREAM, 0);
+   if (socketFd < 0) 
+   std::cout << "Error on socket creation\n";
+
+   bzero((char *) &serverAddress, sizeof(serverAddress));
+   serverAddress.sin_family = AF_INET;
+   serverAddress.sin_addr.s_addr = INADDR_ANY;
+   serverAddress.sin_port = htons(port);
+   if (bind(socketFd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) 	
+   std::cout << "Failed to bind address to socket\n";
+
+
+   std::cout << "Started listening for messages...\n";
+
+   listen(socketFd,5);
+   clientLen = sizeof(clientAddress);
+
+   while(true)
+   {
+
+// First clear existing fd_set
+FD_ZERO(&readfds);
+
+// Add the "server's socket" to set
+FD_SET(socketFd, &readfds);
+// We need the highest file descriptor for the "select"-func?
+int maxsd = socketFd;
+
+for(int i = 0; i < maxClientCount; ++i)
 {
-     	int socketFd;
-	int port = 51421;	
-	
-	const int maxClientCount = 1024;
-	int clientfds[maxClientCount];
-	memset(clientfds, 0, sizeof(int) * maxClientCount);
+int sd = clientfds[i];
+if(sd > 0)
+FD_SET(sd, &readfds);
 
-	fd_set readfds;
+if(sd > maxsd)
+maxsd = sd;
+}
 
-	
-     	socklen_t clientLen;
+// Wait for activity on one of the sockets..
+int activity = select(maxsd + 1, &readfds, NULL, NULL, NULL);
 
-	size_t maxRecvBufSize = 512;
-     	char receiveBuffer[maxRecvBufSize];
- 
-	struct sockaddr_in serverAddress;
-	struct sockaddr_in clientAddress;
+if(activity < 0)
+{
+std::cout << "Error on select\n";
+}
 
-     	socketFd = socket(AF_INET, SOCK_STREAM, 0);
-     	if (socketFd < 0) 
-		std::cout << "Error on socket creation\n";
+int newSocket;
 
-	bzero((char *) &serverAddress, sizeof(serverAddress));
-     	serverAddress.sin_family = AF_INET;
-     	serverAddress.sin_addr.s_addr = INADDR_ANY;
-     	serverAddress.sin_port = htons(port);
-     	if (bind(socketFd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) 	
-		std::cout << "Failed to bind address to socket\n";
+// Check if something happened on our master socket
+// -> means we got a new connection...
+if(FD_ISSET(socketFd, &readfds))
+{
+    newSocket = accept(socketFd, (struct sockaddr*)&clientAddress, &clientLen);
+    if(newSocket < 0)
+    {
+        std::cout << "Error on acccept\n";
+    }
+    else
+    {
+        // If conn successfully "accepted" -> send welcome message...
 
-	
-	std::cout << "Started listening for messages...\n";
+        std::string responseData = 
+            "HTTP/1.1 200 OK\n"
+            "Content-Type: application/octet-stream\n"
+            "Content-Length: 2\n"
+            "Access-Control-Allow-Origin: *\n"
+            "\n"
+            "hi\n";
 
-	listen(socketFd,5);
-     	clientLen = sizeof(clientAddress);
-     	
-	while(true)
-	{
-		
-		// First clear existing fd_set
-		FD_ZERO(&readfds);
-		
-		// Add the "server's socket" to set
-		FD_SET(socketFd, &readfds);
-		// We need the highest file descriptor for the "select"-func?
-		int maxsd = socketFd;
-		
-		for(int i = 0; i < maxClientCount; ++i)
-		{
-			int sd = clientfds[i];
-			if(sd > 0)
-				FD_SET(sd, &readfds);
-			
-			if(sd > maxsd)
-				maxsd = sd;
-		}
-		
-		// Wait for activity on one of the sockets..
-		int activity = select(maxsd + 1, &readfds, NULL, NULL, NULL);
-		
-		if(activity < 0)
-		{
-			std::cout << "Error on select\n";
-		}
+        int sentBytes = send(newSocket, responseData.data(), responseData.size(), 0);
+        if(sentBytes != (int)responseData.size())
+        {
+            std::cout << "Error on welcome send\n";
+        }
+        // Add this new connection to our connections list
+        for(int i = 0; i < maxClientCount; ++i)
+        {
+            if(clientfds[i] == 0)
+            {
+                clientfds[i] = newSocket;
+                break;
+            }
+        }
+    }
+}
 
-		int newSocket;
-		
-		// Check if something happened on our master socket
-		// -> means we got a new connection...
-		if(FD_ISSET(socketFd, &readfds))
-		{
-			newSocket = accept(socketFd, (struct sockaddr*)&clientAddress, &clientLen);
-			if(newSocket < 0)
-			{
-				std::cout << "Error on acccept\n";
-			}
-			else
-			{
-				// If conn successfully "accepted" -> send welcome message...
-				
-				std::string responseData = 
-				"HTTP/1.1 200 OK\n"
-				"Content-Type: application/octet-stream\n"
-				"Content-Length: 2\n"
-				"Access-Control-Allow-Origin: *\n"
-				"\n"
-				"hi\n";
-			
-				int sentBytes = send(newSocket, responseData.data(), responseData.size(), 0);
-				if(sentBytes != (int)responseData.size())
-				{
-					std::cout << "Error on welcome send\n";
-				}
-				// Add this new connection to our connections list
-				for(int i = 0; i < maxClientCount; ++i)
-				{
-					if(clientfds[i] == 0)
-					{
-						clientfds[i] = newSocket;
-						break;
-					}
-				}
-			}
-		}
 
-		
-		// Check activity on other "connected sockets"
-		for(int i = 0; i < maxClientCount; ++i)
-		{
-			int sd = clientfds[i];
-			if(FD_ISSET(sd, &readfds))
-			{
-				// Check if this was for closing conn...
-				int readVal = read(sd, receiveBuffer, maxRecvBufSize);
-				if(readVal == 0)
-				{
-					//close(sd);
-					//clientfds[i] = 0;
-					//std::cout << "Client disconnected\n";
-				}
-				// If some other activity...
-				else
-				{
-					std::cout << "Received:\n" << receiveBuffer << std::endl;
-				}
-			}
-		}
-		
-	
-		bzero(receiveBuffer,maxRecvBufSize);
-	}
-	
-	close(socketFd);
-	
-	return 0; 
+// Check activity on other "connected sockets"
+for(int i = 0; i < maxClientCount; ++i)
+{
+    int sd = clientfds[i];
+    if(FD_ISSET(sd, &readfds))
+    {
+        // Check if this was for closing conn...
+        int readVal = read(sd, receiveBuffer, maxRecvBufSize);
+        if(readVal == 0)
+        {
+            //close(sd);
+            //clientfds[i] = 0;
+            //std::cout << "Client disconnected\n";
+        }
+        // If some other activity...
+        else
+        {
+            std::cout << "Received:\n" << receiveBuffer << std::endl;
+        }
+    }
+}
+
+
+bzero(receiveBuffer,maxRecvBufSize);
+}
+
+close(socketFd);
+
+return 0; 
 }
 */
 

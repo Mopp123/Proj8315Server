@@ -7,6 +7,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 #include <sys/types.h>
 #include <string>
@@ -20,7 +21,7 @@
 bool Server::s_shutdown = false;
 
 Server::Server(int port, size_t maxClientCount) :
-    _port(port), _maxClientCount(maxClientCount), 
+    _port(port), _maxClientCount(maxClientCount),
     _game(512), // *NOTE! size of the game world is just temporarely hardcoded here!
     _messageHandler(*this, _game)
 {
@@ -30,13 +31,16 @@ Server::Server(int port, size_t maxClientCount) :
     {
         Debug::log("Failed to create socket");
     }
+    // NOTE: "Server thread"(main thread) is only accepting or declining connections
+    //  -> no need to be in non blocking mode!
+    //fcntl(_serverSD, F_SETFL, O_NONBLOCK);
 
     // Set reusable for development..
     int opt_reuse = 1;
     if (setsockopt(_serverSD, SOL_SOCKET, SO_REUSEADDR, &opt_reuse, (socklen_t)(sizeof(int))) < 0)
         Debug::log("Failed to set sockopt SO_REUSEADDR");
 
-    // Config address
+    // Configure address
     memset(&_address, 0, sizeof(_address));
     _address.sin_family = AF_INET;
     _address.sin_addr.s_addr = INADDR_ANY;
@@ -51,6 +55,25 @@ Server::Server(int port, size_t maxClientCount) :
     const int maxSockQueLen = 10; // how many connections may wait for acceptance simultaniously
     listen(_serverSD, maxSockQueLen);
     Debug::log("Started server on port:" + std::to_string(port));
+
+
+    // TESTING!
+    // add few users
+    for (int i = 1; i < 7; ++i)
+    {
+        std::string username = "test" + std::to_string(i);
+        std::string password = "test" + std::to_string(i);
+
+        PK_byte nameData[USER_NAME_SIZE];
+        PK_byte passwdData[USER_PASSWD_SIZE];
+        memset(nameData, 0, USER_NAME_SIZE);
+        memset(passwdData, 0, USER_PASSWD_SIZE);
+        memcpy(nameData, username.data(), username.size());
+        memcpy(passwdData, password.data(), password.size());
+
+        _users[std::string(nameData, USER_NAME_SIZE)] = User(nameData, USER_NAME_SIZE, passwdData, USER_PASSWD_SIZE);
+        Debug::log("Created test user: " + username);
+    }
 }
 
 Server::~Server()
@@ -59,10 +82,20 @@ Server::~Server()
 
 void Server::beginMsgHandler()
 {
-    if(!_msgHandlerThread)
-        _msgHandlerThread = new std::thread(&MessageHandler::run, &_messageHandler);
+    if(!_pClientMessageHandlerThread)
+        _pClientMessageHandlerThread = new std::thread(&MessageHandler::handleClientMessages, &_messageHandler);
     else
-        Debug::log("Attempted to launch MessageHandler multiple times!");
+        Debug::log("Attempted to launch MessageHandler::handleClientMessages multiple times!");
+
+    if(!_pWorldStateBroadcastThread)
+        _pWorldStateBroadcastThread = new std::thread(&MessageHandler::broadcastWorldState, &_messageHandler);
+    else
+        Debug::log("Attempted to launch MessageHandler::broadcastWorldState multiple times!");
+
+    if(!_pFactionStatesBroadcastThread)
+        _pFactionStatesBroadcastThread = new std::thread(&MessageHandler::broadcastFactionStates, &_messageHandler);
+    else
+        Debug::log("Attempted to launch MessageHandler::broadcastFactionStates multiple times!");
 }
 
 void Server::beginGame()
@@ -75,81 +108,231 @@ void Server::beginGame()
 
 void Server::run()
 {
-    sockaddr_in clientAddress;	
+    sockaddr_in clientAddress;
     memset(&clientAddress, 0, sizeof(clientAddress));
     socklen_t clientLen = sizeof(clientAddress);
     int connSD = accept(_serverSD, (struct sockaddr*)&clientAddress, &clientLen);
 
-    // Get details of conn..
-    //getpeername(connSD, (struct sockaddr*)&clientAddress, &clientLen);
-    //char* clientAddrName = inet_ntoa(clientAddress.sin_addr);
-    //unsigned short clientPort = ntohs(clientAddress.sin_port);
-
     // TODO: connection validation (using initial message) before adding to "connected clients"
-    if (connSD)
+    if (connSD >= 0)
     {
-        bool connectionExists = false;
-        for (ClientData& client : _clients)
+        // Get details of conn..
+        getpeername(connSD, (struct sockaddr*)&clientAddress, &clientLen);
+        char* clientAddrName = inet_ntoa(clientAddress.sin_addr);
+        unsigned short clientPort = ntohs(clientAddress.sin_port);
+        std::string clientAddr = std::string(clientAddrName) + ":" + std::to_string(clientPort);
+
+        if (_clients.find(clientAddr) == _clients.end())
         {
-            if (client.connSD == connSD)
-            {
-                connectionExists = true;
-                break;
-            }
+            Debug::log("Attempting to connect new client");
+            // Make this connection socket non blocking
+            fcntl(connSD, F_SETFL, O_NONBLOCK);
+
+            std::lock_guard<std::mutex> lock(_mutex);
+            // TODO: some kind of validation stuff?
+            _clients[clientAddr] = Client(clientAddr, connSD);
         }
-        if (!connectionExists)
-            connectNewClient(connSD);
         else
+        {
             Debug::log("Double connecting prevented");
+        }
     }
 }
 
 // TODO: Safe and "complete" server shutdown func
 void Server::shutdown()
 {
-    if(_gameThread)
+    // Destroy Game
+    if (_gameThread)
     {
         _gameThread->join();
         delete _gameThread;
     }
-    for (ClientData& client : _clients)
+
+    // Close client connections
+    for (const std::pair<std::string, Client> client : _clients)
+        disconnectClient(client.second);
+
+    // Destroy MessageHandler
+    if (_pClientMessageHandlerThread)
     {
-        if (client.connSD)
-            close(client.connSD);
+        _pClientMessageHandlerThread->join();
+        delete _pClientMessageHandlerThread;
     }
+    if (_pWorldStateBroadcastThread)
+    {
+        _pWorldStateBroadcastThread->join();
+        delete _pWorldStateBroadcastThread;
+    }
+    if (_pFactionStatesBroadcastThread)
+    {
+        _pFactionStatesBroadcastThread->join();
+        delete _pFactionStatesBroadcastThread;
+    }
+
     close(_serverSD);
 }
 
-std::vector<ClientData> Server::getClientConnections() const
+std::unordered_map<std::string, Client> Server::getClientConnections() const
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    std::vector<ClientData> clientList(_clients);
-    return clientList;
+    return _clients;
 }
 
-// TODO: 
-//  When reqistering user -> hash username and passwd together
-bool Server::validateCredentials(const std::string& username, const std::string& password) const
+User Server::getUser(const std::string& name)
 {
-    const std::string filePath = "../usr-data.txt";
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto it = _users.find(name);
+    if (it != _users.end())
+        return it->second;
+    return NULL_USER;
+}
+
+User Server::getUser(const Client& client)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto it = _clientUserMapping.find(client.getAddress());
+    if (it != _clientUserMapping.end())
+        return *it->second;
+    return NULL_USER;
+}
+
+bool Server::loginUser(const Client& client, const std::string& username)
+{
+    // TODO: Make sure this client can be found
+    // TODO: MAKE THIS SAFER!
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (_users.find(username) != _users.end())
+    {
+        _clientUserMapping[client.getAddress()] = &_users[username];
+        //_clients[client.getAddress()].setUser(&_users[username]);
+        return true;
+    }
+    return false;
+}
+
+bool Server::createUser(
+    const Client& client,
+    const PK_byte* usernameData,
+    size_t usernameSize,
+    const PK_byte* passwdData,
+    size_t passwdSize
+)
+{
+    std::string usernameStr(usernameData, usernameSize);
+    if (_users.find(usernameStr) == _users.end())
+    {
+        Debug::log("Created new user: " + usernameStr + " to server");
+        _users[usernameStr] = User(usernameData, usernameSize, passwdData, passwdSize);
+        return true;
+    }
+    return false;
+}
+
+// TODO: CHANGE THIS TO USE THE NEW IN MEM USERS AND NOT THAT FILE THING!!!!!!!!!!!!!!!!!!!!!
+// TODO:
+//  When reqistering user -> hash username and passwd together
+std::tuple<bool, bool, const Faction*> Server::validateCredentials(
+    const PK_byte* pUsernameData,
+    const PK_byte* pPasswordData
+) const
+{
+    std::string usernameStr(pUsernameData, USER_NAME_SIZE);
+
+    bool isValid = false;
+    bool hasFaction = false;
+    const Faction* pUserFaction = nullptr;
+
+    for (auto u : _users)
+    {
+        bool ans = u.second.getName() == usernameStr;
+        Debug::log("___TEST___@validation: testing " + usernameStr + "(" + std::to_string(usernameStr.size()) + ") against " + u.second.getName() + " (" +
+                std::to_string(u.second.getName().size()) + ") result: " + std::to_string(ans));
+    }
+
+    auto it = _users.find(usernameStr);
+    if (it != _users.end())
+    {
+        Debug::log("___TEST___@validation: FOUND USER!");
+        const User& user = it->second;
+        const PK_byte* userPasswordData = user.getPasswordData();
+        isValid = memcmp(pPasswordData, userPasswordData, USER_PASSWD_SIZE) == 0;
+        if (isValid)
+        {
+            const std::string& userFactionName = user.getFactionName();
+            if (userFactionName.size() > 0)
+            {
+                pUserFaction = _game.getFaction(userFactionName);
+                hasFaction = true;
+            }
+            // Dont allow login if logged in already
+            if (user.isLoggedIn())
+            {
+                isValid = false;
+                hasFaction = false;
+            }
+        }
+    }
+    else
+    {
+        Debug::log("___TEST___@validation: FAILED TO FIND USER!");
+    }
+    return { isValid, hasFaction, pUserFaction };
+
+    // ---
+    /*
+    Debug::log("___TEST___validating logging in user...");
+    const std::string filePath = "data/usr-data.txt";
     std::fstream fileStream(filePath);
     if (!fileStream.is_open())
         throw std::runtime_error("Failed to open obj info file from: " + filePath);
-    std::string line;
-    std::string combinedStr(USER_NAME_LEN + USER_PASSWD_LEN, ' ');
-    memcpy(combinedStr.data(), username.c_str(), username.length());
-    memcpy(combinedStr.data() + USER_NAME_LEN, password.c_str(), password.length());
+
     bool isValid = false;
+    const int entryLineCount = 3;
+    int currentLine = 0;
+    int currentEntryLine = 0;
+    int currentEntry = 0;
+    std::vector<std::string> currentEntryData = {"", "", ""};
+    const Faction* userFaction = nullptr;
+    bool hasFaction = false;
+
+    std::string line;
     while (std::getline(fileStream, line))
     {
-        if (line == combinedStr)
+        currentEntryData[currentEntryLine] = line;
+        currentEntryLine++;
+        currentLine++;
+        // Check does this entry match inputted credentials
+        // Move to next entry in file
+        if (currentLine % entryLineCount == 0)
         {
-            isValid = true;
-            break;
+            if (currentEntryData[0] == username && currentEntryData[1] == password)
+            {
+                isValid = true;
+                std::string userFactionName = line;
+                // TODO: Assign some minimum possible faction name length
+                if (userFactionName.size() >= 1)
+                {
+                    hasFaction = true;
+                    userfaction = game::get()->getfaction(userfactionname);
+                    if (userFaction == nullptr)
+                    {
+                        Debug::log(
+                            "Found faction name data for user but couldn't find that faction from Game",
+                            Debug::MessageType::ERROR
+                        );
+                        hasFaction = false;
+                    }
+                }
+                break;
+            }
+            currentEntryLine = 0;
+            currentEntry++;
         }
     }
     fileStream.close();
-    return isValid;
+    return { isValid, hasFaction, userFaction };
+    */
 }
 
 void Server::trigger_shutdown()
@@ -163,43 +346,45 @@ bool Server::is_shutting_down()
     return s_shutdown;
 }
 
-void Server::connectNewClient(int connSD)
+void Server::disconnectClient(const Client& client)
 {
-    Debug::log("Attempting to connect new client");
     std::lock_guard<std::mutex> lock(_mutex);
-    // TODO: some kind of validation stuff..
-    std::string clientName = "null";
-    ClientData newClient(connSD, clientName.c_str(), clientName.size());
-    _clients.push_back(newClient);
+    const std::string& clientAddr = client.getAddress();
+    std::unordered_map<std::string, Client>::const_iterator it = _clients.find(clientAddr);
+    if (it != _clients.end())
+    {
+        std::unordered_map<std::string, User*>::const_iterator itUserMapping = _clientUserMapping.find(clientAddr);
+        if (itUserMapping != _clientUserMapping.end())
+            _clientUserMapping.erase(itUserMapping);
+        else
+            Debug::log(
+                "Attempted to remove entry from client-user mapping but didn't find the entry",
+                Debug::MessageType::ERROR
+            );
+        _clients.erase(it);
+        close(client.getConnSD());
+        Debug::log("Client disconnected: " + clientAddr);
+    }
+    else
+    {
+        Debug::log("Failed to disconnect client: " + clientAddr +
+            ". Client wasn't found from connected clients",
+            Debug::MessageType::ERROR
+        );
+    }
 }
 
-void Server::disconnectClient(int connSD)
+void Server::updateUserData(const User& user, int32_t xPos, int32_t zPos, int32_t observeRadius)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    size_t pos = 0;
-    for (const ClientData& connectedClient : _clients)
-    {
-        if (connectedClient.connSD == connSD)
-            break;
-        pos++;
-    }
-    Debug::log("Client disconnected");
-    _clients.erase(_clients.begin() + pos);
+    // TODO: Make this safer by checking can this user even be found!
+    _users[user.getName()].updateObserveProperties(xPos, zPos, observeRadius);
 }
 
-void Server::updateClientData(const ClientData& toUpdate, int32_t xPos, int32_t zPos, int32_t observeRadius)
+void Server::updateUserFaction(const User& user, const Faction& faction)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    // TODO: optimize client finding
-    for (ClientData& client : _clients)
-    {
-        if (client == toUpdate)
-        {
-            client.xPos = xPos;
-            client.zPos = zPos;
-            client.observeRadius = observeRadius;
-            break;
-        }
-    }
+    // TODO: Make this safer by checking can this user even be found!
+    _users[user.getName()].setFactionName(faction.getName());
 }
 

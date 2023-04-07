@@ -20,45 +20,68 @@
 
 #define NULL_MESSAGE Message(NULL_CLIENT, nullptr, 0)
 
+#define MESSAGE_INFO_MESSAGE_LEN 256
+
 #define MESSAGE_TYPE__GetServerMessage          0x1
 #define MESSAGE_TYPE__UserLogin            	0x2
 #define MESSAGE_TYPE__UserLogout            	0x3
-#define MESSAGE_TYPE__GetObjInfoLib             0x4
-#define MESSAGE_TYPE__GetFaction                0x5
+#define MESSAGE_TYPE__UserRegister            	0x4
+#define MESSAGE_TYPE__GetObjInfoLib             0x5
 #define MESSAGE_TYPE__CreateFaction             0x6
-#define MESSAGE_TYPE__GetWorldState             0x7
-#define MESSAGE_TYPE__UpdateObserverProperties 	0x8
-#define MESSAGE_TYPE__ServerShutdown            0x9
+#define MESSAGE_TYPE__EditFaction               0x7
+#define MESSAGE_TYPE__GetWorldState             0x8
+#define MESSAGE_TYPE__GetAllFactions            0x9
+#define MESSAGE_TYPE__GetChangedFactions        0x10
+#define MESSAGE_TYPE__UpdateObserverProperties 	0x11
+#define MESSAGE_TYPE__Deploy 	                0x12
+//#define MESSAGE_TYPE__ServerShutdown            0x11
 
 
 class Message
 {
 private:
-    ClientData _client = NULL_CLIENT; // client which sent this message
+    Client _client = NULL_CLIENT; // client which sent this message
     PK_byte* _pData = nullptr;
-    size_t _dataLen = 0;
+    size_t _totalDataSize = 0;
+    // Used to deterimne where to add data if calling "add" -func
+    int _currentDataPtr = 0;
 
 public:
-    Message(const ClientData& client, char* pData, size_t dataLen);
+    Message(const Client& client, char* pData, size_t totalDataSize);
+    Message(const Client& client, uint32_t messageType, size_t totalDataSize);
     Message(const Message& other);
     ~Message();
 
+    void add(PK_byte* data, size_t dataSize);
+    void incrWritePos(size_t size);
     int32_t getType() const;
 
-    inline const ClientData& getClient() const { return _client; }
+    inline const Client& getClient() const { return _client; }
     inline PK_byte* accessData() { return _pData; }
-    inline size_t getSize() const { return _dataLen; }
+    inline size_t getSize() const { return _totalDataSize; }
 
     bool operator==(const Message& other)
     {
-        return (_client == other._client) && 
-            (_dataLen == other._dataLen) && 
-            (memcmp(_pData, other._pData, _dataLen));
+        bool dataEqual = false;
+        if (_totalDataSize == other._totalDataSize && _pData != nullptr && other._pData != nullptr)
+            dataEqual = memcmp(_pData, other._pData, _totalDataSize) == 0;
+        else
+            dataEqual = _pData == nullptr && other._pData == nullptr;
+        return _client == other._client &&
+            _totalDataSize == other._totalDataSize &&
+            dataEqual;
     }
 
     bool operator!=(const Message& other)
     {
-        return !(*this == other);
+        bool dataEqual = false;
+        if (_totalDataSize == other._totalDataSize && _pData != nullptr && other._pData != nullptr)
+            dataEqual = memcmp(_pData, other._pData, _totalDataSize) == 0;
+        else
+            dataEqual = _pData == nullptr && other._pData == nullptr;
+        return _client != other._client ||
+            _totalDataSize != other._totalDataSize ||
+            !dataEqual;
     }
 };
 
@@ -89,6 +112,8 @@ private:
     const size_t _maxRecvBufLen = 512;
     PK_byte* _pRecvBuf = nullptr;
 
+    mutable std::mutex _mutex;
+
     // specifies what happens on each different kind of client message
     std::unordered_map<int32_t, Message(*)(Server& server, Message&)> _msgFuncMapping;
 
@@ -100,7 +125,13 @@ public:
     ~MessageHandler();
 
     void addToMsgQueue(const Message& msg);
-    void run();
+    // Reads client messages and responds accordingly
+    void handleClientMessages();
+    // Broadcasts world state("tiles") to all clients
+    void broadcastWorldState();
+    // Broadcasts each in game faction's state to all clients
+    // but ONLY if faction's state has changed
+    void broadcastFactionStates();
 
 private:
     Message processMessage(Message& msg);

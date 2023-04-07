@@ -1,18 +1,32 @@
 #include "Faction.h"
+#include "Debug.h"
 
 
-Faction::Faction(const char* name, size_t nameLen)
+Faction::Faction(const PK_byte* nameData, size_t nameSize)
 {
-	if (nameLen > FACTION_DATA_MAX_STRLEN)
-		nameLen = FACTION_DATA_MAX_STRLEN;
-	memset(_name, 0, sizeof(char) * FACTION_DATA_MAX_STRLEN);
-	memcpy(_name, name, sizeof(char) * nameLen);
+    if (nameSize > FACTION_NAME_SIZE)
+        nameSize = FACTION_NAME_SIZE;
+    memset(_nameData, 0, FACTION_NAME_SIZE);
+    memcpy(_nameData, nameData, nameSize);
 
-	memset(_deployments, 0, sizeof(PK_ubyte) * FACTION_DATA_MAX_DEPLOY_COUNT);
+    memset(_deployments, 0, sizeof(PK_ubyte) * FACTION_MAX_DEPLOY_COUNT);
+
+    _name = std::string(_nameData, FACTION_NAME_SIZE);
 }
 
-void Faction::setDeployments(PK_ubyte* deployments, size_t count) 
+void Faction::setDeployments(PK_ubyte* deployments, size_t count)
 {
-	if (count <= FACTION_DATA_MAX_DEPLOY_COUNT)
-		memcpy(_deployments, deployments, sizeof(PK_ubyte) * count);
+    if (count <= FACTION_MAX_DEPLOY_COUNT)
+        memcpy(_deployments, deployments, sizeof(PK_ubyte) * count);
 }
+
+const PK_byte* Faction::getNetwData() const
+{
+    return _nameData;
+}
+
+size_t Faction::get_netw_size()
+{
+    return FACTION_NAME_SIZE;
+}
+

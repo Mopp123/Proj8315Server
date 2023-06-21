@@ -5,7 +5,7 @@
 
 #include "Object.h"
 #include "Debug.h"
-#include "game/world/Tile.h"
+#include "../../../Proj8315Common/src/Tile.h"
 
 
 namespace world
@@ -71,10 +71,10 @@ namespace world
                 for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
                     actions.push_back(rawInfo[2 + i]);
 
-                PK_ubyte speed = (PK_ubyte)std::stoi(rawInfo[2 + (TILE_STATE_MAX_action + 1)]);
+                GC_ubyte speed = (GC_ubyte)std::stoi(rawInfo[2 + (TILE_STATE_MAX_action + 1)]);
 
                 uint64_t initialTileState = 0;
-                world::set_tile_thingid(initialTileState, i);
+                gamecommon::set_tile_thingid(initialTileState, i);
 
                 allObjectInfo.push_back({name, description, actions, speed, initialTileState});
                 i++;

@@ -5,6 +5,7 @@
 #include <thread>
 #include <chrono>
 
+#include "../Proj8315Common/src/Common.h"
 #include "MessageHandler.h"
 #include "Server.h"
 #include "msgs/General.h"
@@ -12,6 +13,9 @@
 #include "Debug.h"
 
 
+using namespace gamecommon;
+
+/*
 Message::Message(const Client& client, char* pData, size_t totalDataSize) :
     _client(client), _totalDataSize(totalDataSize)
 {
@@ -105,9 +109,10 @@ int32_t Message::getType() const
 
     return type;
 }
+*/
 
 // ---------------------------------------------------------
-
+/*
 void MessageQueue::push(const Message& msg)
 {
     std::lock_guard<std::mutex> lock(_mutex);
@@ -135,13 +140,14 @@ bool MessageQueue::isEmpty() const
     std::lock_guard<std::mutex> lock(_mutex);
     return _messages.empty();
 }
+*/
 
 // ---------------------------------------------------------
 
 MessageHandler::MessageHandler(Server& server, Game& game) :
     _serverRef(server), _gameRef(game)
 {
-    _pRecvBuf = new PK_byte[_maxRecvBufLen];
+    _pRecvBuf = new GC_byte[_maxRecvBufLen];
     memset(_pRecvBuf, 0, _maxRecvBufLen);
 
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetServerMessage, msgs::get_server_message));
@@ -160,11 +166,6 @@ MessageHandler::~MessageHandler()
     delete[] _pRecvBuf;
 }
 
-void MessageHandler::addToMsgQueue(const Message& msg)
-{
-    _msgQueue.push(msg);
-}
-
 void MessageHandler::handleClientMessages()
 {
     while(_run)
@@ -177,18 +178,21 @@ void MessageHandler::handleClientMessages()
 
             if (readBytes > 0)
             {
-                Message msg(client.second, _pRecvBuf, readBytes);
-                Message response = processMessage(msg);
+                //Message msg(client.second, _pRecvBuf, readBytes);
+                //Message response = processMessage(msg);
+
+                Message msg(_pRecvBuf, readBytes);
+                Message response = processMessage(client.second, msg);
 
                 if (response != NULL_MESSAGE)
                 {
-                    std::string rawStr(response.accessData(), response.getSize());
+                    std::string rawStr(response.getData(), response.getDataSize());
 
                     std::lock_guard<std::mutex> lock(_mutex);
                     ssize_t sentBytes = send(
-                        msg.getClient().getConnSD(),
-                        response.accessData(),
-                        response.getSize(),
+                        client.second.getConnSD(),
+                        response.getData(),
+                        response.getDataSize(),
                         MSG_NOSIGNAL
                     );
                     if (sentBytes < 0)
@@ -228,8 +232,8 @@ void MessageHandler::broadcastWorldState()
                 std::lock_guard<std::mutex> lock(_mutex);
                 ssize_t sentBytes = send(
                     client.second.getConnSD(),
-                    worldStateMsg.accessData(),
-                    worldStateMsg.getSize(),
+                    worldStateMsg.getData(),
+                    worldStateMsg.getDataSize(),
                     MSG_NOSIGNAL
                 );
                 // TODO: Better probing for dropped connections!
@@ -259,8 +263,8 @@ void MessageHandler::broadcastFactionStates()
                 std::lock_guard<std::mutex> lock(_mutex);
                 ssize_t sentBytes = send(
                     client.second.getConnSD(),
-                    changedFactionsMsg.accessData(),
-                    changedFactionsMsg.getSize(),
+                    changedFactionsMsg.getData(),
+                    changedFactionsMsg.getDataSize(),
                     MSG_NOSIGNAL
                 );
                 Debug::log(
@@ -280,14 +284,14 @@ void MessageHandler::broadcastFactionStates()
     }
 }
 
-Message MessageHandler::processMessage(Message& msg)
+Message MessageHandler::processMessage(const Client& client, Message& msg)
 {
     const int32_t msgType = msg.getType();
 
     auto iter = _msgFuncMapping.find(msgType);
     if(iter != _msgFuncMapping.end())
     {
-        return (*_msgFuncMapping[msgType])(_serverRef, msg);
+        return (*_msgFuncMapping[msgType])(_serverRef, client, msg);
     }
     else
     {

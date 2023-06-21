@@ -1,6 +1,8 @@
 #pragma once
 
-#include "MessageHandler.h"
+#include "../../Proj8315Common/src/Common.h"
+#include "../../Proj8315Common/src/Message.h"
+#include "Client.h"
 
 class Server;
 
@@ -16,7 +18,7 @@ namespace msgs
     // TODO: Remove -> this wasnt used after moving from requests to websockets
     // Message msg_fetchWorldState(Server& server, Message& msg);
 
-    Message get_all_factions(Server& server, Message& msg);
-    Message create_new_faction(Server& server, Message& msg);
-    Message edit_faction(Server& server, Message& msg);
+    gamecommon::Message get_all_factions(Server& server, const Client& client,  gamecommon::Message& msg);
+    gamecommon::Message create_new_faction(Server& server, const Client& client, gamecommon::Message& msg);
+    gamecommon::Message edit_faction(Server& server, const Client& client, gamecommon::Message& msg);
 }

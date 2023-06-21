@@ -1,11 +1,11 @@
 #include "Game.h"
-#include "../Common.h"
+#include "../../Proj8315Common/src/Common.h"
+#include "../../Proj8315Common/src/Tile.h"
 #include "Server.h"
 #include "MessageHandler.h"
 
 #include "objects/Object.h"
 #include "objects/ObjectUpdater.h"
-#include "world/Tile.h"
 #include "world/WorldGenerator.h"
 #include "../Debug.h"
 
@@ -16,6 +16,8 @@
 #include <utility>
 #include <string>
 
+
+using namespace gamecommon;
 
 Game* Game::s_pInstance = nullptr;
 
@@ -34,14 +36,14 @@ Game::Game(int worldWidth) :
 
     _objUpdater = new world::objects::ObjectUpdater(*this);
 
-    // *Initially we always need at least one "static-neutral" faction
+    // *Initially we always need at least one neutral faction
     const std::string neutralFactionName = "Neutral";
-    PK_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
+    GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
     memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
-    Faction* neutralFaction = new Faction(neutralFactionName.data(), neutralFactionName.size());
-    neutralFaction->setDeployments(neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
-    neutralFaction->markUpdated(false);
-    _factions.insert(std::make_pair(neutralFaction->getName(), neutralFaction));
+    gamecommon::Faction neutralFaction(neutralFactionName.data(), neutralFactionName.size());
+    neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
+    neutralFaction.markUpdated(false);
+    _factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
 
     // initialize object types "library"
     _objectInfo = world::objects::load_obj_info_file("data/objects-conf.txt");
@@ -64,7 +66,7 @@ Game::Game(int worldWidth) :
         {
             int index = x + y * _worldWidth;
             uint64_t currentState = _pWorld[index];
-            PK_ubyte terrType = world::get_tile_terrtype(currentState);
+            GC_ubyte terrType = get_tile_terrtype(currentState);
             if (terrType == 4)
             {
                 int diceThrow = std::rand() % 100;
@@ -77,9 +79,6 @@ Game::Game(int worldWidth) :
 
 Game::~Game()
 {
-    for (std::pair<std::string, Faction*> f : _factions)
-        delete f.second;
-
     delete _objUpdater;
     delete[] _pWorld;
 }
@@ -136,26 +135,27 @@ void Game::run()
     }
 }
 
+// NOTE: Not sure does this actually change the original faction?
 void Game::resetChangedFactionsStatus()
 {
     std::lock_guard<std::mutex> lock(_mutex_worldState);
-    for (const std::pair<std::string, Faction*> faction : _factions)
+    for (auto& faction : _factions)
     {
-        if (faction.second->isUpdated())
-            faction.second->markUpdated(false);
+        if (faction.second.isUpdated())
+            faction.second.markUpdated(false);
     }
 }
 
-Message Game::addFaction(Server& server, const Client& client, PK_byte* nameData, size_t nameSize)
+Message Game::addFaction(Server& server, const Client& client, GC_byte* nameData, size_t nameSize)
 {
     std::string factionNameStr(nameData, nameSize);
     Debug::log("Attempting to create faction: " + factionNameStr);
 
+    GC_byte success = 0;
+    Faction faction = NULL_FACTION;
+
     const size_t maxErrMessageSize = 50;
     std::string errorMessage = "";
-    Message response(NULL_CLIENT, MESSAGE_TYPE__CreateFaction, 1 + Faction::get_netw_size() + maxErrMessageSize);
-    PK_byte success = 0;
-    Faction* faction = nullptr;
 
     std::lock_guard<std::mutex> lock(_mutex_faction);
     auto iter = _factions.find(factionNameStr);
@@ -176,10 +176,11 @@ Message Game::addFaction(Server& server, const Client& client, PK_byte* nameData
         }
         else
         {
-            faction = new Faction(nameData, nameSize);
-            _factions.insert(std::make_pair(factionNameStr, faction));
+            Faction newFaction(nameData, nameSize);
+            faction = newFaction;
+            _factions.insert(std::make_pair(factionNameStr, newFaction));
             Debug::log("New faction created successfully. Current faction count: " + std::to_string(_factions.size()));
-            server.updateUserFaction(owner, *faction);
+            server.updateUserFaction(owner, faction);
             success = 1;
         }
     }
@@ -187,25 +188,31 @@ Message Game::addFaction(Server& server, const Client& client, PK_byte* nameData
     {
         errorMessage = "Faction with this name already exists";
     }
-    response.add((PK_byte*)&success, 1);
-    if (faction)
-    {
-        response.add((PK_byte*)&(*faction), Faction::get_netw_size());
-    }
-    else
-    {
-        Faction nullFaction = NULL_FACTION;
-        response.add((PK_byte*)&nullFaction, Faction::get_netw_size());
-    }
-    response.add((PK_byte*)errorMessage.data(), errorMessage.size());
-    return response;
+
+    int32_t msgType = MESSAGE_TYPE__CreateFaction;
+    size_t factionSize = Faction::get_netw_size();
+    size_t bufSize = sizeof(int32_t) + 1 + Faction::get_netw_size() + maxErrMessageSize;
+    GC_byte pBuf[bufSize];
+    memset(pBuf, 0, bufSize);
+    memcpy(pBuf, &msgType, sizeof(int32_t));
+    memcpy(pBuf + sizeof(int32_t), &success, 1);
+    memcpy(pBuf + sizeof(int32_t) + 1, faction.getNetwData(), factionSize);
+    memcpy(pBuf + sizeof(int32_t) + 1 + factionSize, errorMessage.data(), errorMessage.size());
+
+    return Message(pBuf, bufSize);
 }
 
 Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 {
     const int observeRectWidth = (observeRadius * 2) + 1;
     size_t bufSize = sizeof(int32_t) + (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
-    Message response(NULL_CLIENT, MESSAGE_TYPE__GetWorldState, bufSize);
+    //Message response(NULL_CLIENT, MESSAGE_TYPE__GetWorldState, bufSize);
+
+    int32_t msgType = MESSAGE_TYPE__GetWorldState;
+    GC_byte* pBuf = new GC_byte[bufSize];
+    memset(pBuf, 0, bufSize);
+    memcpy(pBuf, &msgType, sizeof(int32_t));
+    int writePos = sizeof(int32_t);
 
     for(int z = zPos - observeRadius; z <= zPos + observeRadius; ++z)
     {
@@ -218,50 +225,70 @@ Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
                 int tileIndex = x + z * _worldWidth;
                 // .. need to lock so nothing funny happens...
                 std::lock_guard<std::mutex> lock(_mutex_worldState);
-                response.add((PK_byte*)(_pWorld + tileIndex), sizeof(uint64_t));
+
+                //response.add((PK_byte*)(_pWorld + tileIndex), sizeof(uint64_t));
+                memcpy(pBuf + writePos, (GC_byte*)(_pWorld + tileIndex), sizeof(uint64_t));
             }
-            else
-            {
-                response.incrWritePos(sizeof(uint64_t));
-            }
+            //response.incrWritePos(sizeof(uint64_t));
+            writePos += sizeof(uint64_t);
         }
     }
-    return response;
+    Message msg(pBuf, bufSize);
+    delete[] pBuf;
+    return msg;
 }
 
 // Returns all factions' data
 Message Game::getAllFactions() const
 {
-    Message response(NULL_CLIENT, MESSAGE_TYPE__GetAllFactions, _factions.size() * Faction::get_netw_size());
+    //Message response(NULL_CLIENT, MESSAGE_TYPE__GetAllFactions, _factions.size() * Faction::get_netw_size());
+    int32_t msgType = MESSAGE_TYPE__GetAllFactions;
+    size_t bufSize = sizeof(int32_t) + _factions.size() * Faction::get_netw_size();
+    GC_byte buf[bufSize];
+    memset(buf, 0, bufSize);
+    memcpy(buf, &msgType, sizeof(int32_t));
+    int writePos = sizeof(int32_t);
 
     std::lock_guard<std::mutex> lock(_mutex_worldState);
-    for (const std::pair<std::string, Faction*> faction : _factions)
+    for (const std::pair<std::string, Faction> faction : _factions)
     {
-        Faction* factionObj = faction.second;
-        response.add((PK_byte*)factionObj->getNetwData(), Faction::get_netw_size());
+        size_t factionSize = Faction::get_netw_size();
+        memcpy(buf + writePos, faction.second.getNetwData(), factionSize);
+        writePos += factionSize;
+
+        //Faction* factionObj = faction.second;
+        //response.add((PK_byte*)factionObj->getNetwData(), Faction::get_netw_size());
     }
-    return response;
+    return Message(buf, bufSize);
 }
 
 Message Game::getChangedFactions() const
 {
     std::lock_guard<std::mutex> lock(_mutex_worldState);
-    std::vector<Faction*> changedFactions;
-    for (const std::pair<std::string, Faction*> faction : _factions)
+    std::vector<Faction> changedFactions;
+    for (const std::pair<std::string, Faction> faction : _factions)
     {
-        if (faction.second->isUpdated())
+        if (faction.second.isUpdated())
             changedFactions.push_back(faction.second);
     }
     if (changedFactions.empty())
         return NULL_MESSAGE;
-    size_t bufSize = changedFactions.size() * Faction::get_netw_size();
-    Message response(NULL_CLIENT, MESSAGE_TYPE__GetChangedFactions, bufSize);
+    //Message response(NULL_CLIENT, MESSAGE_TYPE__GetChangedFactions, bufSize);
+    int32_t msgType = MESSAGE_TYPE__GetChangedFactions;
+    size_t bufSize = sizeof(int32_t) + changedFactions.size() * Faction::get_netw_size();
+    GC_byte buf[bufSize];
+    memset(buf, 0, bufSize);
+    memcpy(buf, &msgType, sizeof(int32_t));
+    int writePos = sizeof(int32_t);
 
-    for (Faction* faction : changedFactions)
+    for (const Faction& faction : changedFactions)
     {
-        response.add((PK_byte*)&(*faction), Faction::get_netw_size());
+        //response.add((PK_byte*)&(*faction), Faction::get_netw_size());
+        size_t factionSize = Faction::get_netw_size();
+        memcpy(buf + writePos, faction.getNetwData(), factionSize);
+        writePos += factionSize;
     }
-    return response;
+    return Message(buf, bufSize);
 }
 
 Message Game::getObjInfoLibMsg() const
@@ -273,7 +300,7 @@ Message Game::getObjInfoLibMsg() const
     }
     size_t bufSize = sizeof(int32_t) + _totalObjInfoSize;
     size_t objSize = world::objects::get_netw_objinfo_size();
-    PK_byte* buffer = new PK_byte[bufSize];
+    GC_byte* buffer = new GC_byte[bufSize];
     memset(buffer, 0, bufSize);
 
     // Set first 4 bytes to contain message type name
@@ -326,9 +353,9 @@ Message Game::getObjInfoLibMsg() const
               );
         bufPos += objSize;
     }
-    Message response(NULL_CLIENT, buffer, bufSize);
+    Message msg(buffer, bufSize);
     delete[] buffer;
-    return response;
+    return msg;
 }
 
 const std::vector<world::objects::ObjectInfo>& Game::getObjInfoLib()
@@ -350,13 +377,13 @@ const world::objects::ObjectInfo& Game::getObjInfo(int index) const
     }
 }
 
-const Faction* Game::getFaction(const std::string& name) const
+const Faction Game::getFaction(const std::string& name) const
 {
-    std::unordered_map<std::string, Faction*>::const_iterator it = _factions.find(name);
+    std::unordered_map<std::string, Faction>::const_iterator it = _factions.find(name);
     if (it != _factions.end())
         return (*it).second;
     else
-        return nullptr;
+        return NULL_FACTION;
 }
 
 uint64_t Game::getTileState(int xPos, int zPos) const

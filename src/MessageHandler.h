@@ -6,37 +6,38 @@
 #include <queue>
 #include <mutex>
 
-#include "Common.h"
+#include "../Proj8315Common/src/Common.h"
+#include "../Proj8315Common/src/Message.h"
 #include "Debug.h"
+#include "Client.h"
 #include "game/Game.h"
-#include "ByteBuffer.h"
 
 
-#define USER_ID_LEN 32
-#define MESSAGE_MAX_DATA_SIZE (100*100*8)
-#define MESSAGE_MIN_DATA_SIZE sizeof(int32_t)
-
-#define MESSAGE_ENTRY_SIZE__header sizeof(int32_t)
-
-#define NULL_MESSAGE Message(NULL_CLIENT, nullptr, 0)
-
-#define MESSAGE_INFO_MESSAGE_LEN 256
-
-#define MESSAGE_TYPE__GetServerMessage          0x1
-#define MESSAGE_TYPE__UserLogin            	0x2
-#define MESSAGE_TYPE__UserLogout            	0x3
-#define MESSAGE_TYPE__UserRegister            	0x4
-#define MESSAGE_TYPE__GetObjInfoLib             0x5
-#define MESSAGE_TYPE__CreateFaction             0x6
-#define MESSAGE_TYPE__EditFaction               0x7
-#define MESSAGE_TYPE__GetWorldState             0x8
-#define MESSAGE_TYPE__GetAllFactions            0x9
-#define MESSAGE_TYPE__GetChangedFactions        0x10
-#define MESSAGE_TYPE__UpdateObserverProperties 	0x11
-#define MESSAGE_TYPE__Deploy 	                0x12
+//#define USER_ID_LEN 32
+//#define MESSAGE_MAX_DATA_SIZE (100*100*8)
+//#define MESSAGE_MIN_DATA_SIZE sizeof(int32_t)
+//
+//#define MESSAGE_ENTRY_SIZE__header sizeof(int32_t)
+//
+//#define NULL_MESSAGE Message(NULL_CLIENT, nullptr, 0)
+//
+//#define MESSAGE_INFO_MESSAGE_LEN 256
+//
+//#define MESSAGE_TYPE__GetServerMessage          0x1
+//#define MESSAGE_TYPE__UserLogin            	0x2
+//#define MESSAGE_TYPE__UserLogout            	0x3
+//#define MESSAGE_TYPE__UserRegister            	0x4
+//#define MESSAGE_TYPE__GetObjInfoLib             0x5
+//#define MESSAGE_TYPE__CreateFaction             0x6
+//#define MESSAGE_TYPE__EditFaction               0x7
+//#define MESSAGE_TYPE__GetWorldState             0x8
+//#define MESSAGE_TYPE__GetAllFactions            0x9
+//#define MESSAGE_TYPE__GetChangedFactions        0x10
+//#define MESSAGE_TYPE__UpdateObserverProperties 	0x11
+//#define MESSAGE_TYPE__Deploy 	                0x12
 //#define MESSAGE_TYPE__ServerShutdown            0x11
 
-
+/*
 class Message
 {
 private:
@@ -84,20 +85,7 @@ public:
             !dataEqual;
     }
 };
-
-
-// *Thread safe message queue
-class MessageQueue
-{
-private:
-    mutable std::mutex _mutex;
-    std::queue<Message> _messages;
-
-public:
-    void push(const Message& msg);
-    Message pop();
-    bool isEmpty() const;
-};
+*/
 
 
 class Server;
@@ -110,21 +98,19 @@ private:
     Game& _gameRef;
 
     const size_t _maxRecvBufLen = 512;
-    PK_byte* _pRecvBuf = nullptr;
+    GC_byte* _pRecvBuf = nullptr;
 
     mutable std::mutex _mutex;
 
     // specifies what happens on each different kind of client message
-    std::unordered_map<int32_t, Message(*)(Server& server, Message&)> _msgFuncMapping;
+    std::unordered_map<int32_t, gamecommon::Message(*)(Server& server, const Client& client, gamecommon::Message&)> _msgFuncMapping;
 
-    MessageQueue _msgQueue;
     bool _run = true;
 
 public:
     MessageHandler(Server& server, Game& game);
     ~MessageHandler();
 
-    void addToMsgQueue(const Message& msg);
     // Reads client messages and responds accordingly
     void handleClientMessages();
     // Broadcasts world state("tiles") to all clients
@@ -134,6 +120,7 @@ public:
     void broadcastFactionStates();
 
 private:
-    Message processMessage(Message& msg);
+    gamecommon::Message processMessage(const Client& client, gamecommon::Message& msg);
+
 };
 

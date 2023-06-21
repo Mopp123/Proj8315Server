@@ -6,11 +6,10 @@
 #include <queue>
 #include <vector>
 
+#include "../../../Proj8315Common/src/Faction.h"
+#include "../../../Proj8315Common/src/Tile.h"
 #include "Debug.h"
 #include "Action.h"
-#include "Common.h"
-#include "game/Faction.h"
-#include "game/world/Tile.h"
 
 
 #define OBJECT_DATA_STRLEN_NAME 32
@@ -35,7 +34,7 @@ namespace world
             char actionSlot[TILE_STATE_MAX_action + 1][OBJECT_DATA_STRLEN_ACTION_NAME];
 
             // stats
-            PK_ubyte speed;
+            GC_ubyte speed;
 
             uint64_t initialState = 0;
 
@@ -43,7 +42,7 @@ namespace world
                     const std::string& objName,
                     const std::string& objDescription,
                     std::vector<std::string>& actionSlots,
-                    PK_ubyte speedVal,
+                    GC_ubyte speedVal,
                     uint64_t beginState
                     ):
                 speed(speedVal),
@@ -102,18 +101,18 @@ namespace world
             int _x = 0;
             int _z = 0;
             uint64_t _state = 0;
-            PK_ubyte _objType = 0;
+            GC_ubyte _objType = 0;
             std::queue<int> _actionQueue;
-            Faction* _pFaction;
+            gamecommon::Faction& _factionRef;
 
             // Current action's progress
             float _actionProgress = 0.0f;
 
         public:
-            ObjectInstanceData(int x, int z, uint64_t currentState, Faction* pFaction) :
-                _x(x), _z(z), _state(currentState), _pFaction(pFaction)
+            ObjectInstanceData(int x, int z, uint64_t currentState, gamecommon::Faction& factionRef) :
+                _x(x), _z(z), _state(currentState), _factionRef(factionRef)
         {
-            _objType = get_tile_thingid(currentState);
+            _objType = gamecommon::get_tile_thingid(currentState);
         }
             ObjectInstanceData(const ObjectInstanceData& other) = delete;
 
@@ -129,7 +128,7 @@ namespace world
             void setState(uint64_t state)
             {
                 _state = state;
-                _objType = get_tile_thingid(_state);
+                _objType = gamecommon::get_tile_thingid(_state);
             }
 
             int getX() const { return _x; }
@@ -141,7 +140,7 @@ namespace world
             std::queue<int>& getActionQueue() { return _actionQueue; }
             void addAction(int actionID) { _actionQueue.push(actionID); }
 
-            Faction* getFaction() { return _pFaction; }
+            gamecommon::Faction& getFaction() { return _factionRef; }
         };
     }
 }

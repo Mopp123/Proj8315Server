@@ -18,6 +18,8 @@
 #include "Debug.h"
 
 
+using namespace gamecommon;
+
 bool Server::s_shutdown = false;
 
 Server::Server(int port, size_t maxClientCount) :
@@ -64,8 +66,8 @@ Server::Server(int port, size_t maxClientCount) :
         std::string username = "test" + std::to_string(i);
         std::string password = "test" + std::to_string(i);
 
-        PK_byte nameData[USER_NAME_SIZE];
-        PK_byte passwdData[USER_PASSWD_SIZE];
+        GC_byte nameData[USER_NAME_SIZE];
+        GC_byte passwdData[USER_PASSWD_SIZE];
         memset(nameData, 0, USER_NAME_SIZE);
         memset(passwdData, 0, USER_PASSWD_SIZE);
         memcpy(nameData, username.data(), username.size());
@@ -213,9 +215,9 @@ bool Server::loginUser(const Client& client, const std::string& username)
 
 bool Server::createUser(
     const Client& client,
-    const PK_byte* usernameData,
+    const GC_byte* usernameData,
     size_t usernameSize,
-    const PK_byte* passwdData,
+    const GC_byte* passwdData,
     size_t passwdSize
 )
 {
@@ -229,47 +231,43 @@ bool Server::createUser(
     return false;
 }
 
-// TODO: CHANGE THIS TO USE THE NEW IN MEM USERS AND NOT THAT FILE THING!!!!!!!!!!!!!!!!!!!!!
 // TODO:
 //  When reqistering user -> hash username and passwd together
-std::tuple<bool, bool, const Faction*> Server::validateCredentials(
-    const PK_byte* pUsernameData,
-    const PK_byte* pPasswordData
-) const
+std::pair<bool, Faction> Server::validateLoginReq(const gamecommon::LoginRequest& msg) const
 {
-    std::string usernameStr(pUsernameData, USER_NAME_SIZE);
-
+    const std::string& reqUsername = msg.getUsername();
+    const GC_byte* pReqPasswordData = msg.getPasswordData();
     bool isValid = false;
-    bool hasFaction = false;
-    const Faction* pUserFaction = nullptr;
+    Faction userFaction = NULL_FACTION;
 
     for (auto u : _users)
     {
-        bool ans = u.second.getName() == usernameStr;
-        Debug::log("___TEST___@validation: testing " + usernameStr + "(" + std::to_string(usernameStr.size()) + ") against " + u.second.getName() + " (" +
-                std::to_string(u.second.getName().size()) + ") result: " + std::to_string(ans));
+        bool ans = u.second.getName() == reqUsername;
+        Debug::log(
+            "___TEST___@validation: testing " + reqUsername +
+            "(" + std::to_string(reqUsername.size()) + ") against " + u.second.getName() + " (" +
+            std::to_string(u.second.getName().size()) + ") result: " + std::to_string(ans)
+        );
     }
 
-    auto it = _users.find(usernameStr);
+    auto it = _users.find(reqUsername);
     if (it != _users.end())
     {
         Debug::log("___TEST___@validation: FOUND USER!");
         const User& user = it->second;
-        const PK_byte* userPasswordData = user.getPasswordData();
-        isValid = memcmp(pPasswordData, userPasswordData, USER_PASSWD_SIZE) == 0;
+        const GC_byte* userPasswordData = user.getPasswordData();
+        isValid = memcmp(pReqPasswordData, userPasswordData, USER_PASSWD_SIZE) == 0;
         if (isValid)
         {
             const std::string& userFactionName = user.getFactionName();
             if (userFactionName.size() > 0)
             {
-                pUserFaction = _game.getFaction(userFactionName);
-                hasFaction = true;
+                userFaction = _game.getFaction(userFactionName);
             }
             // Dont allow login if logged in already
             if (user.isLoggedIn())
             {
                 isValid = false;
-                hasFaction = false;
             }
         }
     }
@@ -277,62 +275,7 @@ std::tuple<bool, bool, const Faction*> Server::validateCredentials(
     {
         Debug::log("___TEST___@validation: FAILED TO FIND USER!");
     }
-    return { isValid, hasFaction, pUserFaction };
-
-    // ---
-    /*
-    Debug::log("___TEST___validating logging in user...");
-    const std::string filePath = "data/usr-data.txt";
-    std::fstream fileStream(filePath);
-    if (!fileStream.is_open())
-        throw std::runtime_error("Failed to open obj info file from: " + filePath);
-
-    bool isValid = false;
-    const int entryLineCount = 3;
-    int currentLine = 0;
-    int currentEntryLine = 0;
-    int currentEntry = 0;
-    std::vector<std::string> currentEntryData = {"", "", ""};
-    const Faction* userFaction = nullptr;
-    bool hasFaction = false;
-
-    std::string line;
-    while (std::getline(fileStream, line))
-    {
-        currentEntryData[currentEntryLine] = line;
-        currentEntryLine++;
-        currentLine++;
-        // Check does this entry match inputted credentials
-        // Move to next entry in file
-        if (currentLine % entryLineCount == 0)
-        {
-            if (currentEntryData[0] == username && currentEntryData[1] == password)
-            {
-                isValid = true;
-                std::string userFactionName = line;
-                // TODO: Assign some minimum possible faction name length
-                if (userFactionName.size() >= 1)
-                {
-                    hasFaction = true;
-                    userfaction = game::get()->getfaction(userfactionname);
-                    if (userFaction == nullptr)
-                    {
-                        Debug::log(
-                            "Found faction name data for user but couldn't find that faction from Game",
-                            Debug::MessageType::ERROR
-                        );
-                        hasFaction = false;
-                    }
-                }
-                break;
-            }
-            currentEntryLine = 0;
-            currentEntry++;
-        }
-    }
-    fileStream.close();
-    return { isValid, hasFaction, userFaction };
-    */
+    return std::make_pair(isValid, userFaction);
 }
 
 void Server::trigger_shutdown()

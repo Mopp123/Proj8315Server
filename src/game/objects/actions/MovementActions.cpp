@@ -2,9 +2,11 @@
 #include "game/Game.h"
 #include "game/objects/Action.h"
 #include "game/objects/Object.h"
-#include "game/world/Tile.h"
+#include "../../../../Proj8315Common/src/Tile.h"
 #include "Debug.h"
 
+
+using namespace gamecommon;
 
 namespace world
 {
@@ -46,18 +48,18 @@ namespace world
                 }
             }
 
-            static float get_move_speed_val(PK_ubyte objType)
+            static float get_move_speed_val(GC_ubyte objType)
             {
                 Game* game = Game::get();
                 const int speedStat = game->getObjInfo(objType).speed;
                 return Game::get()->getStatFloatMapping()["speed"][speedStat];
             }
 
-            Move::Move(PK_ubyte direction) :
+            Move::Move(GC_ubyte direction) :
                 _dir(direction)
             {}
 
-            PK_ubyte Move::run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth)
+            GC_ubyte Move::run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth)
             {
                 int x = obj->getX();
                 int z = obj->getZ();
@@ -126,7 +128,7 @@ namespace world
                 }
                 else
                 {
-                    const PK_ubyte objType = get_tile_thingid(startTile);
+                    const GC_ubyte objType = get_tile_thingid(startTile);
                     const float speedVal = get_move_speed_val(objType);
 
                     set_tile_action(startTile, TileStateAction::TILE_STATE_actionMove);
@@ -139,18 +141,18 @@ namespace world
 
 
 
-            MoveVertical::MoveVertical(PK_ubyte direction) :
+            MoveVertical::MoveVertical(GC_ubyte direction) :
                 _dir(direction)
             {}
 
-            PK_ubyte MoveVertical::run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth)
+            GC_ubyte MoveVertical::run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth)
             {
                 const int radius = 2;
                 const int str = 1;
 
                 float& actionProgress = obj->accessActionProgress();
                 uint64_t& currentTile = worldState[obj->getX() + obj->getZ() * worldWidth];
-                const PK_ubyte objType = get_tile_thingid(currentTile);
+                const GC_ubyte objType = get_tile_thingid(currentTile);
                 if (actionProgress >= 1.0f)
                 {
                     actionProgress = 0.0f;
@@ -175,7 +177,7 @@ namespace world
                                     continue;
 
                                 uint64_t& observedTile = worldState[tileIndex];
-                                PK_ubyte currentElevation = get_tile_terrelevation(observedTile);
+                                GC_ubyte currentElevation = get_tile_terrelevation(observedTile);
                                 if (currentElevation - str >= 0)
                                     set_tile_terrelevation(observedTile, currentElevation - str);
 

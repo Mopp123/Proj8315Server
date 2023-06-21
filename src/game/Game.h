@@ -5,14 +5,16 @@
 #include <string>
 #include <unordered_map>
 
-#include "Faction.h"
+#include "../../Proj8315Common/src/Faction.h"
+#include "../../Proj8315Common/src/Common.h"
+#include "../../Proj8315Common/src/Message.h"
+#include "Client.h"
 #include "objects/Object.h"
 #include "game/objects/ObjectUpdater.h"
 
 //#define GAME_WORLD_WIDTH 2000
 
 class Server;
-class Message;
 
 
 class Game
@@ -23,7 +25,7 @@ private:
     mutable std::mutex _mutex_faction;
     mutable std::mutex _mutex_worldState;
 
-    std::unordered_map<std::string, Faction*> _factions;
+    std::unordered_map<std::string, gamecommon::Faction> _factions;
     std::vector<world::objects::ObjectInfo> _objectInfo;
     std::unordered_map<std::string, std::vector<float>> _statFloatMapping =
     {
@@ -56,17 +58,17 @@ public:
     void run();
     void resetChangedFactionsStatus();
 
-    Message addFaction(Server& server, const Client& client, PK_byte* nameData, size_t nameSize);
+    gamecommon::Message addFaction(Server& server, const Client& client, GC_byte* nameData, size_t nameSize);
     // Returns current "dynamic" world state
-    Message getWorldState(int xPos, int zPos, int observeRadius) const;
+    gamecommon::Message getWorldState(int xPos, int zPos, int observeRadius) const;
     // Returns all factions' data
-    Message getAllFactions() const;
-    Message getChangedFactions() const;
+    gamecommon::Message getAllFactions() const;
+    gamecommon::Message getChangedFactions() const;
     // Returns message containing static object info (may change only between server-restarting updates)
-    Message getObjInfoLibMsg() const;
+    gamecommon::Message getObjInfoLibMsg() const;
     const std::vector<world::objects::ObjectInfo>& getObjInfoLib();
     const world::objects::ObjectInfo& getObjInfo(int index) const;
-    const Faction* getFaction(const std::string& name) const;
+    const gamecommon::Faction getFaction(const std::string& name) const;
 
     uint64_t getTileState(int xPos, int zPos) const;
     uint64_t getTileState(int index) const;

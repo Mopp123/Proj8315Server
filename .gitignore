@@ -1,4 +1,5 @@
 .cache
+*.swp
 CMakeCache.txt
 CMakeFiles
 MMOGameServer

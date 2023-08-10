@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "../../Proj8315Common/src/Common.h"
 #include "../../Proj8315Common/src/Tile.h"
+#include "../../Proj8315Common/src/messages/WorldMessages.h"
 #include "Server.h"
 #include "MessageHandler.h"
 
@@ -40,7 +41,7 @@ Game::Game(int worldWidth) :
     const std::string neutralFactionName = "Neutral";
     GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
     memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
-    gamecommon::Faction neutralFaction(neutralFactionName.data(), neutralFactionName.size());
+    Faction neutralFaction(neutralFactionName.data(), neutralFactionName.size());
     neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
     neutralFaction.markUpdated(false);
     _factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
@@ -48,7 +49,7 @@ Game::Game(int worldWidth) :
     // initialize object types "library"
     _objectInfo = world::objects::load_obj_info_file("data/objects-conf.txt");
     // determine total size of the objLib in bytes
-    _totalObjInfoSize = _objectInfo.size() * world::objects::get_netw_objinfo_size();
+    _totalObjInfoSize = _objectInfo.size() * get_netw_objinfo_size();
     _objInfoInitialized = true;
 
     // Testing movement with these objs
@@ -135,10 +136,12 @@ void Game::run()
     }
 }
 
-// NOTE: Not sure does this actually change the original faction?
+// NOTE: Inefficient?
 void Game::resetChangedFactionsStatus()
 {
     std::lock_guard<std::mutex> lock(_mutex_worldState);
+    // NOTE: interpreting warnings as errors dont allow using std::pair<std::string, Faction>&
+    // but accepts auto&. ..weird?
     for (auto& faction : _factions)
     {
         if (faction.second.isUpdated())
@@ -154,7 +157,6 @@ Message Game::addFaction(Server& server, const Client& client, GC_byte* nameData
     GC_byte success = 0;
     Faction faction = NULL_FACTION;
 
-    const size_t maxErrMessageSize = 50;
     std::string errorMessage = "";
 
     std::lock_guard<std::mutex> lock(_mutex_faction);
@@ -191,7 +193,7 @@ Message Game::addFaction(Server& server, const Client& client, GC_byte* nameData
 
     int32_t msgType = MESSAGE_TYPE__CreateFaction;
     size_t factionSize = Faction::get_netw_size();
-    size_t bufSize = sizeof(int32_t) + 1 + Faction::get_netw_size() + maxErrMessageSize;
+    size_t bufSize = sizeof(int32_t) + 1 + Faction::get_netw_size() + MESSAGE_ERR_STR_SIZE;
     GC_byte pBuf[bufSize];
     memset(pBuf, 0, bufSize);
     memcpy(pBuf, &msgType, sizeof(int32_t));
@@ -199,16 +201,15 @@ Message Game::addFaction(Server& server, const Client& client, GC_byte* nameData
     memcpy(pBuf + sizeof(int32_t) + 1, faction.getNetwData(), factionSize);
     memcpy(pBuf + sizeof(int32_t) + 1 + factionSize, errorMessage.data(), errorMessage.size());
 
-    return Message(pBuf, bufSize);
+    return Message(pBuf, bufSize, bufSize);
 }
 
 Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 {
     const int observeRectWidth = (observeRadius * 2) + 1;
     size_t bufSize = sizeof(int32_t) + (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
-    //Message response(NULL_CLIENT, MESSAGE_TYPE__GetWorldState, bufSize);
 
-    int32_t msgType = MESSAGE_TYPE__GetWorldState;
+    int32_t msgType = MESSAGE_TYPE__WorldState;
     GC_byte* pBuf = new GC_byte[bufSize];
     memset(pBuf, 0, bufSize);
     memcpy(pBuf, &msgType, sizeof(int32_t));
@@ -226,21 +227,21 @@ Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
                 // .. need to lock so nothing funny happens...
                 std::lock_guard<std::mutex> lock(_mutex_worldState);
 
-                //response.add((PK_byte*)(_pWorld + tileIndex), sizeof(uint64_t));
                 memcpy(pBuf + writePos, (GC_byte*)(_pWorld + tileIndex), sizeof(uint64_t));
             }
-            //response.incrWritePos(sizeof(uint64_t));
             writePos += sizeof(uint64_t);
         }
     }
-    Message msg(pBuf, bufSize);
+    Message msg(pBuf, bufSize, MESSAGE_REQUIRED_SIZE__WorldStateMsg);
     delete[] pBuf;
     return msg;
 }
 
 // Returns all factions' data
+// TODO: Create message of type "GetAllFactions" which takes just takes all factions as parameter
 Message Game::getAllFactions() const
 {
+    /*
     //Message response(NULL_CLIENT, MESSAGE_TYPE__GetAllFactions, _factions.size() * Faction::get_netw_size());
     int32_t msgType = MESSAGE_TYPE__GetAllFactions;
     size_t bufSize = sizeof(int32_t) + _factions.size() * Faction::get_netw_size();
@@ -259,14 +260,25 @@ Message Game::getAllFactions() const
         //Faction* factionObj = faction.second;
         //response.add((PK_byte*)factionObj->getNetwData(), Faction::get_netw_size());
     }
-    return Message(buf, bufSize);
+    // NOTE: just a hack atm
+    return Message(buf, bufSize, bufSize);
+    */
+
+    std::vector<Faction> factionsList;
+    factionsList.reserve(_factions.size());
+    std::lock_guard<std::mutex> lock(_mutex_worldState);
+    for (const auto& faction : _factions)
+        factionsList.emplace_back(faction.second);
+
+    return FactionsMsg(factionsList);
 }
 
+// TODO: Create message of type "GetChangedFactions" which takes just takes changed factions as parameter
 Message Game::getChangedFactions() const
 {
     std::lock_guard<std::mutex> lock(_mutex_worldState);
     std::vector<Faction> changedFactions;
-    for (const std::pair<std::string, Faction> faction : _factions)
+    for (auto& faction : _factions)
     {
         if (faction.second.isUpdated())
             changedFactions.push_back(faction.second);
@@ -288,83 +300,17 @@ Message Game::getChangedFactions() const
         memcpy(buf + writePos, faction.getNetwData(), factionSize);
         writePos += factionSize;
     }
-    return Message(buf, bufSize);
+    // NOTE: just a hack atm
+    return Message(buf, bufSize, bufSize);
 }
 
-Message Game::getObjInfoLibMsg() const
-{
-    if (!_objInfoInitialized)
-    {
-        Debug::log("Attempted to access object info library before it was initialized!");
-        return NULL_MESSAGE;
-    }
-    size_t bufSize = sizeof(int32_t) + _totalObjInfoSize;
-    size_t objSize = world::objects::get_netw_objinfo_size();
-    GC_byte* buffer = new GC_byte[bufSize];
-    memset(buffer, 0, bufSize);
-
-    // Set first 4 bytes to contain message type name
-    const int32_t messageType = MESSAGE_TYPE__GetObjInfoLib;
-    memcpy(buffer, (const void*)&messageType, sizeof(int32_t));
-
-    size_t bufPos = sizeof(int32_t);
-
-    for(const world::objects::ObjectInfo& objInfo : _objectInfo)
-    {
-        // *NOTE! Not sure if needing to lock to prevent nothing funny happening...
-        // get name
-        memcpy(
-                (void*)(buffer + bufPos),
-                (const void*)(&objInfo.name),
-                OBJECT_DATA_STRLEN_NAME
-              );
-        // get desc
-        memcpy(
-                (void*)(buffer + bufPos + OBJECT_DATA_STRLEN_NAME),
-                (const void*)(&objInfo.description),
-                OBJECT_DATA_STRLEN_DESCRIPTION
-              );
-        // get action slots
-        for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
-        {
-            memcpy(
-                    (void*)(buffer +
-                        bufPos +
-                        OBJECT_DATA_STRLEN_NAME +
-                        OBJECT_DATA_STRLEN_DESCRIPTION +
-                        (i * OBJECT_DATA_STRLEN_ACTION_NAME)
-                        ),
-                    (const void*)(&objInfo.actionSlot[i]),
-                    OBJECT_DATA_STRLEN_ACTION_NAME
-                  );
-        }
-        const size_t bufPosBeginStats =
-            bufPos +
-            OBJECT_DATA_STRLEN_NAME +
-            OBJECT_DATA_STRLEN_DESCRIPTION +
-            ((TILE_STATE_MAX_action + 1) * OBJECT_DATA_STRLEN_ACTION_NAME
-            );
-        // get stats
-        // NOTE: At the moment all stats has to be single unsigned bytes
-        memcpy(
-                (void*)(buffer + bufPosBeginStats),
-                (const void*)(&objInfo.speed),
-                1
-              );
-        bufPos += objSize;
-    }
-    Message msg(buffer, bufSize);
-    delete[] buffer;
-    return msg;
-}
-
-const std::vector<world::objects::ObjectInfo>& Game::getObjInfoLib()
+const std::vector<ObjectInfo>& Game::getObjInfoLib()
 {
     // NOTE: Not sure should we lock here, since the "objTypeLib" is constant
     return _objectInfo;
 }
 
-const world::objects::ObjectInfo& Game::getObjInfo(int index) const
+const ObjectInfo& Game::getObjInfo(int index) const
 {
     if (index >= 0 && index < (int)_objectInfo.size())
     {

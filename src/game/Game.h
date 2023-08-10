@@ -7,12 +7,14 @@
 
 #include "../../Proj8315Common/src/Faction.h"
 #include "../../Proj8315Common/src/Common.h"
-#include "../../Proj8315Common/src/Message.h"
+#include "../../Proj8315Common/src/Object.h"
+#include "../../Proj8315Common/src/messages/Message.h"
+#include "../../Proj8315Common/src/messages/ObjMessages.h"
 #include "Client.h"
-#include "objects/Object.h"
 #include "game/objects/ObjectUpdater.h"
 
 //#define GAME_WORLD_WIDTH 2000
+
 
 class Server;
 
@@ -26,7 +28,7 @@ private:
     mutable std::mutex _mutex_worldState;
 
     std::unordered_map<std::string, gamecommon::Faction> _factions;
-    std::vector<world::objects::ObjectInfo> _objectInfo;
+    std::vector<gamecommon::ObjectInfo> _objectInfo;
     std::unordered_map<std::string, std::vector<float>> _statFloatMapping =
     {
         {"speed", {0.0f, 0.5f, 1.0f}}
@@ -64,10 +66,8 @@ public:
     // Returns all factions' data
     gamecommon::Message getAllFactions() const;
     gamecommon::Message getChangedFactions() const;
-    // Returns message containing static object info (may change only between server-restarting updates)
-    gamecommon::Message getObjInfoLibMsg() const;
-    const std::vector<world::objects::ObjectInfo>& getObjInfoLib();
-    const world::objects::ObjectInfo& getObjInfo(int index) const;
+    const std::vector<gamecommon::ObjectInfo>& getObjInfoLib();
+    const gamecommon::ObjectInfo& getObjInfo(int index) const;
     const gamecommon::Faction getFaction(const std::string& name) const;
 
     uint64_t getTileState(int xPos, int zPos) const;
@@ -79,7 +79,7 @@ public:
     float getDeltaTime();
     static Game* get();
 
-    inline const std::vector<world::objects::ObjectInfo>& getObjLib() const { return _objectInfo; }
+    inline const std::vector<gamecommon::ObjectInfo>& getObjLib() const { return _objectInfo; }
     inline std::unordered_map<std::string, std::vector<float>>& getStatFloatMapping() { return _statFloatMapping; }
     inline bool validCoords(int x, int z) const
     {

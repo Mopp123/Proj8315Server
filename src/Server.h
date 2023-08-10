@@ -4,7 +4,8 @@
 #include <netinet/in.h>
 #include <vector>
 #include "../Proj8315Common/src/Common.h"
-#include "../Proj8315Common/src/Message.h"
+#include "../Proj8315Common/src/messages/Message.h"
+#include "../Proj8315Common/src/messages/GeneralMessages.h"
 #include "game/Game.h"
 #include "MessageHandler.h"
 #include <unordered_map>

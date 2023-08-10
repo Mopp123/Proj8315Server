@@ -12,6 +12,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/Proj8315
 file (
 	GLOB source_files
 	"${PROJECT_SOURCE_DIR}/Proj8315Common/src/*.cpp"
+	"${PROJECT_SOURCE_DIR}/Proj8315Common/src/messages/*.cpp"
 	"${PROJECT_SOURCE_DIR}/src/*.cpp"
 	"${PROJECT_SOURCE_DIR}/src/game/*.cpp"
 	"${PROJECT_SOURCE_DIR}/src/msgs/*.cpp"

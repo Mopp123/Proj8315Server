@@ -8,19 +8,12 @@
 #include "../../../Proj8315Common/src/Tile.h"
 
 
+using namespace gamecommon;
+
 namespace world
 {
     namespace objects
     {
-        size_t get_netw_objinfo_size()
-        {
-            size_t combinedStrLen = (OBJECT_DATA_STRLEN_NAME + OBJECT_DATA_STRLEN_DESCRIPTION);
-            for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
-                combinedStrLen += OBJECT_DATA_STRLEN_ACTION_NAME;
-            return combinedStrLen + 1;
-        }
-
-
         std::vector<ObjectInfo> load_obj_info_file(const std::string& filePath)
         {
             std::fstream fileStream(filePath);

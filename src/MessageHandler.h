@@ -7,7 +7,7 @@
 #include <mutex>
 
 #include "../Proj8315Common/src/Common.h"
-#include "../Proj8315Common/src/Message.h"
+#include "../Proj8315Common/src/messages/Message.h"
 #include "Debug.h"
 #include "Client.h"
 #include "game/Game.h"

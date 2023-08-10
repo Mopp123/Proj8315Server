@@ -150,10 +150,10 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _pRecvBuf = new GC_byte[_maxRecvBufLen];
     memset(_pRecvBuf, 0, _maxRecvBufLen);
 
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetServerMessage, msgs::get_server_message));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerMessage, msgs::get_server_message));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserLogin, msgs::user_login));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegister, msgs::user_register));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetObjInfoLib, msgs::fetch_obj_type_lib));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ObjInfoLib, msgs::fetch_obj_type_lib));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFaction, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetAllFactions, msgs::get_all_factions));
@@ -178,15 +178,12 @@ void MessageHandler::handleClientMessages()
 
             if (readBytes > 0)
             {
-                //Message msg(client.second, _pRecvBuf, readBytes);
-                //Message response = processMessage(msg);
-
-                Message msg(_pRecvBuf, readBytes);
+                Message msg(_pRecvBuf, readBytes, readBytes, MESSAGE_MAX_SIZE);
                 Message response = processMessage(client.second, msg);
 
                 if (response != NULL_MESSAGE)
                 {
-                    std::string rawStr(response.getData(), response.getDataSize());
+                    //std::string rawStr(response.getData(), response.getDataSize());
 
                     std::lock_guard<std::mutex> lock(_mutex);
                     ssize_t sentBytes = send(
@@ -211,17 +208,13 @@ void MessageHandler::broadcastWorldState()
     while(_run)
     {
         // NOTE: HARDCODED ONLY FOR TESTING ATM!!!
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-        // Send every changed faction's data for all clients
-        Message changedFactionsMsg = _gameRef.getChangedFactions();
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
         // Send game world state for all clients
         std::unordered_map<std::string, Client> currentClients = _serverRef.getClientConnections();
         for (const std::pair<std::string, Client> client : currentClients)
         {
             const User user = _serverRef.getUser(client.second);
-
             if (user != NULL_USER)
             {
                 const int& x = user.getX();
@@ -251,12 +244,15 @@ void MessageHandler::broadcastFactionStates()
 {
     while(_run)
     {
+        continue;
         // Send every changed faction's data for all clients
         Message changedFactionsMsg = _gameRef.getChangedFactions();
         // Send game world state for all clients
 
         if (changedFactionsMsg != NULL_MESSAGE)
         {
+            //Debug::log("Changed faction msg: " + std::to_string(changedFactionsMsg.getType()));
+
             std::unordered_map<std::string, Client> currentClients = _serverRef.getClientConnections();
             for (const std::pair<std::string, Client> client : currentClients)
             {
@@ -267,10 +263,10 @@ void MessageHandler::broadcastFactionStates()
                     changedFactionsMsg.getDataSize(),
                     MSG_NOSIGNAL
                 );
-                Debug::log(
-                    "___TEST___sent changed factions to: " + client.second.getAddress() +
-                    " Sent bytes: " + std::to_string(sentBytes)
-                );
+                //Debug::log(
+                //    "___TEST___sent changed factions to: " + client.second.getAddress() +
+                //    " Sent bytes: " + std::to_string(sentBytes)
+                //);
 
                 // TODO: Better probing for dropped connections!
                 if (sentBytes <= 0)

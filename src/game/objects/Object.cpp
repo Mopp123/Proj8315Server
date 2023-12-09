@@ -5,22 +5,15 @@
 
 #include "Object.h"
 #include "Debug.h"
-#include "game/world/Tile.h"
+#include "../../../Proj8315Common/src/Tile.h"
 
+
+using namespace gamecommon;
 
 namespace world
 {
     namespace objects
     {
-        size_t get_netw_objinfo_size()
-        {
-            size_t combinedStrLen = (OBJECT_DATA_STRLEN_NAME + OBJECT_DATA_STRLEN_DESCRIPTION);
-            for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
-                combinedStrLen += OBJECT_DATA_STRLEN_ACTION_NAME;
-            return combinedStrLen + 1;
-        }
-
-
         std::vector<ObjectInfo> load_obj_info_file(const std::string& filePath)
         {
             std::fstream fileStream(filePath);
@@ -71,10 +64,10 @@ namespace world
                 for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
                     actions.push_back(rawInfo[2 + i]);
 
-                PK_ubyte speed = (PK_ubyte)std::stoi(rawInfo[2 + (TILE_STATE_MAX_action + 1)]);
+                GC_ubyte speed = (GC_ubyte)std::stoi(rawInfo[2 + (TILE_STATE_MAX_action + 1)]);
 
                 uint64_t initialTileState = 0;
-                world::set_tile_thingid(initialTileState, i);
+                gamecommon::set_tile_thingid(initialTileState, i);
 
                 allObjectInfo.push_back({name, description, actions, speed, initialTileState});
                 i++;

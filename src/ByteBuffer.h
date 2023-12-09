@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common.h"
+#include "../Proj8315Common/src/Common.h"
 #include <string>
 #include <cstring>
 #include <cstdint>
@@ -9,7 +9,7 @@
 #define NULL_BYTEBUFFER (net::ByteBuffer(nullptr, 0))
 
 
-	
+
 	class ByteBuffer
 	{
 	private:
@@ -23,13 +23,13 @@
 		};
 
 		DataType _type;
-		PK_byte* _data = nullptr;
+		GC_byte* _data = nullptr;
 		int32_t _size = 0;
-		
+
 	public:
 
 		ByteBuffer();
-		ByteBuffer(PK_byte byteVal);
+		ByteBuffer(GC_byte byteVal);
 		ByteBuffer(const char* cStr, int32_t size);
 		ByteBuffer(int32_t intVal);
 
@@ -41,7 +41,7 @@
 
 		std::string getString() const;
 
-		inline const PK_byte * const getRawData() const { return _data; }
+		inline const GC_byte * const getRawData() const { return _data; }
 
 		template<typename T>
 		T getVal() const
@@ -56,10 +56,10 @@
 
 		inline DataType getDataType() const { return _type; }
 		inline int32_t getSize() const { return _size; }
-		
-		
+
+
 		template<typename T>
-		static T get_val(PK_byte* buffer, int pos = 0)
+		static T get_val(GC_byte* buffer, int pos = 0)
 		{
 			T val;
 			memcpy(&val, buffer + pos, sizeof(T));

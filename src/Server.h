@@ -3,7 +3,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <vector>
-#include "Common.h"
+#include "../Proj8315Common/src/Common.h"
+#include "../Proj8315Common/src/messages/Message.h"
+#include "../Proj8315Common/src/messages/GeneralMessages.h"
 #include "game/Game.h"
 #include "MessageHandler.h"
 #include <unordered_map>
@@ -35,10 +37,10 @@ private:
     // key = client's address
     // NOTE: Client may be accepted but not associated with user
     std::unordered_map<std::string, Client> _clients;
-    std::unordered_map<std::string, User> _users;
+    std::unordered_map<std::string, gamecommon::User> _users;
 
     // Logged in client addr - user mapping
-    std::unordered_map<std::string, User*> _clientUserMapping;
+    std::unordered_map<std::string, gamecommon::User*> _clientUserMapping;
 
     static bool s_shutdown;
 
@@ -54,27 +56,24 @@ public:
     // Removes connection (thread safe)
     void disconnectClient(const Client& client);
 
-    void updateUserData(const User& user, int32_t xPos, int32_t zPos, int32_t observeRadius);
-    void updateUserFaction(const User& user, const Faction& faction);
+    void updateUserData(const gamecommon::User& user, int32_t xPos, int32_t zPos, int32_t observeRadius);
+    void updateUserFaction(const gamecommon::User& user, const gamecommon::Faction& faction);
 
     // Returns vector containing each connection sock. desc. (Thread safely)
     std::unordered_map<std::string, Client> getClientConnections() const;
-    User getUser(const std::string& name);
-    User getUser(const Client& client);
+    gamecommon::User getUser(const std::string& name);
+    gamecommon::User getUser(const Client& client);
     bool loginUser(const Client& client, const std::string& username);
     bool createUser(
         const Client& client,
-        const PK_byte* usernameData,
+        const GC_byte* usernameData,
         size_t usernameSize,
-        const PK_byte* passwdData,
+        const GC_byte* passwdData,
         size_t passwdSize
     );
 
-    // Return values: { validationStatus, hasFaction, factionData }
-    std::tuple<bool, bool, const Faction*> validateCredentials(
-        const PK_byte* pUsernameData,
-        const PK_byte* pPasswordData
-    ) const;
+    // Return values: first = isValid second = user's faction (NULL_FACTION if user doesn't have faction)
+    std::pair<bool, gamecommon::Faction> validateLoginReq(const gamecommon::LoginRequest& msg) const;
 
     static void trigger_shutdown();
     static bool is_shutting_down();

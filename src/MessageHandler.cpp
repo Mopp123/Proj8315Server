@@ -5,6 +5,7 @@
 #include <thread>
 #include <chrono>
 
+#include "../Proj8315Common/src/Common.h"
 #include "MessageHandler.h"
 #include "Server.h"
 #include "msgs/General.h"
@@ -12,6 +13,9 @@
 #include "Debug.h"
 
 
+using namespace gamecommon;
+
+/*
 Message::Message(const Client& client, char* pData, size_t totalDataSize) :
     _client(client), _totalDataSize(totalDataSize)
 {
@@ -105,9 +109,10 @@ int32_t Message::getType() const
 
     return type;
 }
+*/
 
 // ---------------------------------------------------------
-
+/*
 void MessageQueue::push(const Message& msg)
 {
     std::lock_guard<std::mutex> lock(_mutex);
@@ -135,19 +140,20 @@ bool MessageQueue::isEmpty() const
     std::lock_guard<std::mutex> lock(_mutex);
     return _messages.empty();
 }
+*/
 
 // ---------------------------------------------------------
 
 MessageHandler::MessageHandler(Server& server, Game& game) :
     _serverRef(server), _gameRef(game)
 {
-    _pRecvBuf = new PK_byte[_maxRecvBufLen];
+    _pRecvBuf = new GC_byte[_maxRecvBufLen];
     memset(_pRecvBuf, 0, _maxRecvBufLen);
 
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetServerMessage, msgs::get_server_message));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerMessage, msgs::get_server_message));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserLogin, msgs::user_login));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegister, msgs::user_register));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetObjInfoLib, msgs::fetch_obj_type_lib));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ObjInfoLib, msgs::fetch_obj_type_lib));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFaction, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetAllFactions, msgs::get_all_factions));
@@ -158,11 +164,6 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
 MessageHandler::~MessageHandler()
 {
     delete[] _pRecvBuf;
-}
-
-void MessageHandler::addToMsgQueue(const Message& msg)
-{
-    _msgQueue.push(msg);
 }
 
 void MessageHandler::handleClientMessages()
@@ -177,18 +178,21 @@ void MessageHandler::handleClientMessages()
 
             if (readBytes > 0)
             {
-                Message msg(client.second, _pRecvBuf, readBytes);
-                Message response = processMessage(msg);
+                Message msg(_pRecvBuf, readBytes, readBytes, MESSAGE_MAX_SIZE);
+                std::string rawStr(msg.getData(), msg.getDataSize());
+                Debug::log("___TEST___recv raw: " + rawStr);
+
+                Message response = processMessage(client.second, msg);
 
                 if (response != NULL_MESSAGE)
                 {
-                    std::string rawStr(response.accessData(), response.getSize());
+                    //std::string rawStr(response.getData(), response.getDataSize());
 
                     std::lock_guard<std::mutex> lock(_mutex);
                     ssize_t sentBytes = send(
-                        msg.getClient().getConnSD(),
-                        response.accessData(),
-                        response.getSize(),
+                        client.second.getConnSD(),
+                        response.getData(),
+                        response.getDataSize(),
                         MSG_NOSIGNAL
                     );
                     if (sentBytes < 0)
@@ -207,17 +211,13 @@ void MessageHandler::broadcastWorldState()
     while(_run)
     {
         // NOTE: HARDCODED ONLY FOR TESTING ATM!!!
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-        // Send every changed faction's data for all clients
-        Message changedFactionsMsg = _gameRef.getChangedFactions();
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
         // Send game world state for all clients
         std::unordered_map<std::string, Client> currentClients = _serverRef.getClientConnections();
         for (const std::pair<std::string, Client> client : currentClients)
         {
             const User user = _serverRef.getUser(client.second);
-
             if (user != NULL_USER)
             {
                 const int& x = user.getX();
@@ -228,8 +228,8 @@ void MessageHandler::broadcastWorldState()
                 std::lock_guard<std::mutex> lock(_mutex);
                 ssize_t sentBytes = send(
                     client.second.getConnSD(),
-                    worldStateMsg.accessData(),
-                    worldStateMsg.getSize(),
+                    worldStateMsg.getData(),
+                    worldStateMsg.getDataSize(),
                     MSG_NOSIGNAL
                 );
                 // TODO: Better probing for dropped connections!
@@ -247,26 +247,29 @@ void MessageHandler::broadcastFactionStates()
 {
     while(_run)
     {
+        continue;
         // Send every changed faction's data for all clients
         Message changedFactionsMsg = _gameRef.getChangedFactions();
         // Send game world state for all clients
 
         if (changedFactionsMsg != NULL_MESSAGE)
         {
+            //Debug::log("Changed faction msg: " + std::to_string(changedFactionsMsg.getType()));
+
             std::unordered_map<std::string, Client> currentClients = _serverRef.getClientConnections();
             for (const std::pair<std::string, Client> client : currentClients)
             {
                 std::lock_guard<std::mutex> lock(_mutex);
                 ssize_t sentBytes = send(
                     client.second.getConnSD(),
-                    changedFactionsMsg.accessData(),
-                    changedFactionsMsg.getSize(),
+                    changedFactionsMsg.getData(),
+                    changedFactionsMsg.getDataSize(),
                     MSG_NOSIGNAL
                 );
-                Debug::log(
-                    "___TEST___sent changed factions to: " + client.second.getAddress() +
-                    " Sent bytes: " + std::to_string(sentBytes)
-                );
+                //Debug::log(
+                //    "___TEST___sent changed factions to: " + client.second.getAddress() +
+                //    " Sent bytes: " + std::to_string(sentBytes)
+                //);
 
                 // TODO: Better probing for dropped connections!
                 if (sentBytes <= 0)
@@ -280,14 +283,14 @@ void MessageHandler::broadcastFactionStates()
     }
 }
 
-Message MessageHandler::processMessage(Message& msg)
+Message MessageHandler::processMessage(const Client& client, Message& msg)
 {
     const int32_t msgType = msg.getType();
 
     auto iter = _msgFuncMapping.find(msgType);
     if(iter != _msgFuncMapping.end())
     {
-        return (*_msgFuncMapping[msgType])(_serverRef, msg);
+        return (*_msgFuncMapping[msgType])(_serverRef, client, msg);
     }
     else
     {

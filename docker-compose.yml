@@ -1,0 +1,13 @@
+
+version: "3.7"
+
+services:
+
+  proj8315:
+    container_name: proj8315_gameserver
+    command: bash start_server.sh
+    image: proj8315-gameserver
+    volumes:
+      - ./build:/usr/src/gameserver
+    ports:
+      - 51421:51421

@@ -1,14 +1,16 @@
 #include "ObjectUpdater.h"
 #include "game/Game.h"
 #include "game/StateUpdater.h"
-#include "game/world/Tile.h"
 #include "Debug.h"
-#include "Common.h"
+#include "../../../Proj8315Common/src/Tile.h"
+#include "../../../Proj8315Common/src/Common.h"
 
 #include "actions/MovementActions.h"
 #include "actions/CommonActions.h"
 #include "actions/ClassActions.h"
 
+
+using namespace gamecommon;
 
 namespace world
 {
@@ -46,7 +48,7 @@ namespace world
                 delete a;
         }
 
-        bool ObjectUpdater::spawnObject(int x, int z, int objLibIndex, Faction* faction)
+        bool ObjectUpdater::spawnObject(int x, int z, int objLibIndex, gamecommon::Faction& factionRef)
         {
             // *Don't allow spawning "empty" objects accidentally
             if (objLibIndex == 0)
@@ -63,7 +65,7 @@ namespace world
                 {
                     // Add the "objects initial state" to the tile's original state (so all terrain-detail/effects/etc stuff may remain, if we want)
                     uint64_t newState = originalState | _gameRef._objectInfo[objLibIndex].initialState;
-                    ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, faction);
+                    ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, factionRef);
                     _allObjects.push_back(newObj);
                     _gameRef.setTileState(tileIndex, newState);
                     return true;
@@ -104,7 +106,7 @@ namespace world
                     actionQueue.push(TileStateAction::TILE_STATE_actionIdle);
 
                 const int currentActionID = actionQueue.front();
-                PK_ubyte actionStatus = _actionsMapping[currentActionID]->run(obj, _gameRef._pWorld, _gameRef._worldWidth);
+                GC_ubyte actionStatus = _actionsMapping[currentActionID]->run(obj, _gameRef._pWorld, _gameRef._worldWidth);
 
                 switch (actionStatus)
                 {

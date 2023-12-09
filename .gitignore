@@ -1,7 +1,8 @@
 .cache
+*.swp
 CMakeCache.txt
 CMakeFiles
-MMOGameServer
+build/MMOGameServer
 Makefile
 cmake_install.cmake
 compile_commands.json

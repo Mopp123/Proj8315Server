@@ -9,11 +9,11 @@
 	{
 	}
 
-	ByteBuffer::ByteBuffer(PK_byte byteVal) : 
+	ByteBuffer::ByteBuffer(GC_byte byteVal) :
 		_type(DataType::BYTE)
 	{
 		_size = 1;
-		_data = new PK_byte[_size];
+		_data = new GC_byte[_size];
 		memset(_data, 0, _size);
 		memcpy(_data, &byteVal, _size);
 	}
@@ -23,7 +23,7 @@
 		{
 			_type = DataType::STRING;
 			_size = size;
-			_data = new PK_byte[_size];
+			_data = new GC_byte[_size];
 			memset(_data, 0, _size);
 			memcpy(_data, cStr, _size);
 		}
@@ -34,22 +34,22 @@
 			_data = nullptr;
 		}
 	}
-	ByteBuffer::ByteBuffer(int32_t intVal) : 
+	ByteBuffer::ByteBuffer(int32_t intVal) :
 		_type(DataType::INT32)
 	{
 		_size = sizeof(int32_t);
 
-		_data = new PK_byte[_size];
+		_data = new GC_byte[_size];
 		memset(_data, 0, _size);
 		memcpy(_data, &intVal, _size);
 	}
-	
+
 	ByteBuffer::ByteBuffer(const ByteBuffer& other)
 	{
 		_type = other._type;
 		_size = other._size;
 
-		_data = new PK_byte[_size];
+		_data = new GC_byte[_size];
 		memcpy(_data, other._data, _size);
 	}
 

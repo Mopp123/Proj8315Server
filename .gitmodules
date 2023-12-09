@@ -1,3 +1,6 @@
 [submodule "Proj8315Common"]
 	path = Proj8315Common
 	url = git@github.com:Mopp123/Proj8315Common.git
+[submodule "libpqxx"]
+	path = libpqxx
+	url = git@github.com:jtv/libpqxx.git

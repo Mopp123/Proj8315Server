@@ -7,7 +7,7 @@ project(${proj_name})
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=c++17")
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include_directories ("${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/Proj8315Common/src")
+include_directories ("${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/Proj8315Common/src" "/usr/local/include" "/usr/include/postgresql/")
 
 file (
 	GLOB source_files
@@ -27,11 +27,17 @@ file (
 #	src/Main.cpp
 #)
 
+
 add_executable(${proj_name} ${source_files})
 
+find_library(LIBPQXX pqxx)
+message(STATUS "PQXX: ${LIBPQXX}")
+
+find_library(LIBPQ pq)
+message(STATUS "LIBPQ: ${LIBPQ}")
 
 #attempt to include and link that "pthread" thing...
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package (Threads REQUIRED)
 
-target_link_libraries(${proj_name} Threads::Threads)
+target_link_libraries(${proj_name} Threads::Threads ${LIBPQXX} ${LIBPQ})

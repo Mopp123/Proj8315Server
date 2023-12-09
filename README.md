@@ -10,3 +10,6 @@ NOTE: Don't remember anymore how I had configured websockify.
 I think you create python venv in which u install websockify.
 To run the server, you first have to activate the venv and use start.sh
 to get the traffic through..
+
+### Database
+Using PostgreSQL and libpqxx(https://github.com/jtv/libpqxx) management system. NOTE: libpqxx requires libpq-dev to be installed as well!

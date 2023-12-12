@@ -1,0 +1,7 @@
+port=51422
+
+db_name=test_db
+db_user=testuser
+db_passwd=asd123
+db_host=127.0.0.1
+db_port=5432

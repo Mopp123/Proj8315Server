@@ -1,6 +1,6 @@
 #!/bin/bash
 
-su postgres -c "./init_db.sh"
+#su postgres -c "./init_db.sh"
 
 hostname=$( hostname -i )
 echo "Starting game server (hostname: $hostname)"

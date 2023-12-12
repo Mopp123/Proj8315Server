@@ -15,18 +15,46 @@
 #include <stdexcept>
 
 #include "Server.h"
+#include "DatabaseManager.h"
+#include "utils/StringUtil.h"
 #include "Debug.h"
+
+#include <iostream>
 
 
 using namespace gamecommon;
 
 bool Server::s_shutdown = false;
 
-Server::Server(int port, size_t maxClientCount) :
-    _port(port), _maxClientCount(maxClientCount),
+Server::Server(const std::string configFilePath, size_t maxClientCount) :
+    // _port(port), _maxClientCount(maxClientCount),
     _game(512), // *NOTE! size of the game world is just temporarely hardcoded here!
     _messageHandler(*this, _game)
 {
+    Debug::log("Reading config file from: " + configFilePath);
+    _config = readConfigFile(configFilePath);
+    Debug::log("Using configuration:");
+    for (const std::pair<std::string, std::string> p : _config)
+    {
+        Debug::log("    " + p.first + ": " + p.second);
+    }
+
+    if (_config.find("port") != _config.end())
+    {
+        try
+        {
+            _port = std::stoi(_config["port"]);
+            Debug::log("Assigned port to: " + _config["port"]);
+        }
+        catch(const std::invalid_argument& e)
+        {
+            Debug::log(
+                "Failed to assign port from config file. Unable to cast: " + _config["port"] + " to int!",
+                Debug::MessageType::ERROR
+            );
+        }
+    }
+
     // Create socket
     _serverSD = socket(AF_INET, SOCK_STREAM, 0);
     if(_serverSD < 0)
@@ -56,26 +84,59 @@ Server::Server(int port, size_t maxClientCount) :
 
     const int maxSockQueLen = 10; // how many connections may wait for acceptance simultaniously
     listen(_serverSD, maxSockQueLen);
-    Debug::log("Started server on port:" + std::to_string(port));
+    Debug::log("Started server on port: " + std::to_string(_port));
+
+    // Establish database connection
+    if (!DatabaseManager::connect("127.0.0.1", 5432, "test_db", "postgres", "asd"))
+    {
+        Debug::log(
+            "Failed to create server due to database connection error",
+            Debug::MessageType::FATAL_ERROR
+        );
+        return;
+    }
+
+    // std::string testSql = "SELECT * FROM users;";
+    // QueryResult queryResult = DatabaseManager::exec_query(testSql);
+    // if (queryResult.success)
+    //     std::cout << "___TEST___query was successful!\n";
+    // else
+    // {
+    //     if (queryResult.error == QUERY_ERR__UNIQUE_VIOLATION)
+    //         std::cout << "___TEST___ERROR! Username already taken!\n";
+    // }
+
+    // std::vector<gamecommon::User> users;
+    // for (auto const &row : queryResult.result)
+    // {
+    //     std::string name(row["name"].c_str(), row["name"].size());
+    //     std::string password(row["password"].c_str(), row["password"].size());
+
+    //     gamecommon::User user(name.data(), name.size(), password.data(), password.size());
+    //     users.push_back(user);
+    // }
+    // std::cout << "___TEST___created users:\n";
+    // for (const gamecommon::User& user : users)
+    //     std::cout << "    " << user.getName() << std::endl;
 
 
     // TESTING!
     // add few users
-    for (int i = 1; i < 7; ++i)
-    {
-        std::string username = "test" + std::to_string(i);
-        std::string password = "test" + std::to_string(i);
+    // for (int i = 1; i < 7; ++i)
+    // {
+    //     std::string username = "test" + std::to_string(i);
+    //     std::string password = "test" + std::to_string(i);
 
-        GC_byte nameData[USER_NAME_SIZE];
-        GC_byte passwdData[USER_PASSWD_SIZE];
-        memset(nameData, 0, USER_NAME_SIZE);
-        memset(passwdData, 0, USER_PASSWD_SIZE);
-        memcpy(nameData, username.data(), username.size());
-        memcpy(passwdData, password.data(), password.size());
+    //     GC_byte nameData[USER_NAME_SIZE];
+    //     GC_byte passwdData[USER_PASSWD_SIZE];
+    //     memset(nameData, 0, USER_NAME_SIZE);
+    //     memset(passwdData, 0, USER_PASSWD_SIZE);
+    //     memcpy(nameData, username.data(), username.size());
+    //     memcpy(passwdData, password.data(), password.size());
 
-        _users[std::string(nameData, USER_NAME_SIZE)] = User(nameData, USER_NAME_SIZE, passwdData, USER_PASSWD_SIZE);
-        Debug::log("Created test user: " + username);
-    }
+    //     _users[std::string(nameData, USER_NAME_SIZE)] = User(nameData, USER_NAME_SIZE, passwdData, USER_PASSWD_SIZE);
+    //     Debug::log("Created test user: " + username);
+    // }
 }
 
 Server::~Server()
@@ -181,102 +242,95 @@ std::unordered_map<std::string, Client> Server::getClientConnections() const
     return _clients;
 }
 
-User Server::getUser(const std::string& name)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    auto it = _users.find(name);
-    if (it != _users.end())
-        return it->second;
-    return NULL_USER;
-}
+// User Server::getUser(const std::string& name)
+// {
+//     std::lock_guard<std::mutex> lock(_mutex);
+//     auto it = _users.find(name);
+//     if (it != _users.end())
+//         return it->second;
+//     return NULL_USER;
+// }
 
 User Server::getUser(const Client& client)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     auto it = _clientUserMapping.find(client.getAddress());
     if (it != _clientUserMapping.end())
-        return *it->second;
+        return it->second;
     return NULL_USER;
 }
 
-bool Server::loginUser(const Client& client, const std::string& username)
+void Server::loginUser(const Client& client, const gamecommon::User& user)
 {
-    // TODO: Make sure this client can be found
-    // TODO: MAKE THIS SAFER!
+    Debug::log("___TEST___attempting login user: " + user.getName() + " : " + user.getID());
     std::lock_guard<std::mutex> lock(_mutex);
-    if (_users.find(username) != _users.end())
-    {
-        _clientUserMapping[client.getAddress()] = &_users[username];
-        //_clients[client.getAddress()].setUser(&_users[username]);
-        return true;
-    }
-    return false;
+    _clientUserMapping[client.getAddress()] = user;
 }
 
-bool Server::createUser(
-    const Client& client,
-    const GC_byte* usernameData,
-    size_t usernameSize,
-    const GC_byte* passwdData,
-    size_t passwdSize
-)
-{
-    std::string usernameStr(usernameData, usernameSize);
-    if (_users.find(usernameStr) == _users.end())
-    {
-        Debug::log("Created new user: " + usernameStr + " to server");
-        _users[usernameStr] = User(usernameData, usernameSize, passwdData, passwdSize);
-        return true;
-    }
-    return false;
-}
+//TODO: delete
+// bool Server::createUser(
+//     const Client& client,
+//     const GC_byte* usernameData,
+//     size_t usernameSize,
+//     const GC_byte* passwdData,
+//     size_t passwdSize
+// )
+// {
+//     std::string usernameStr(usernameData, usernameSize);
+//     if (_users.find(usernameStr) == _users.end())
+//     {
+//         Debug::log("Created new user: " + usernameStr + " to server");
+//         _users[usernameStr] = User(usernameData, usernameSize, passwdData, passwdSize);
+//         return true;
+//     }
+//     return false;
+// }
 
-// TODO:
-//  When reqistering user -> hash username and passwd together
-std::pair<bool, Faction> Server::validateLoginReq(const gamecommon::LoginRequest& msg) const
-{
-    const std::string& reqUsername = msg.getUsername();
-    const GC_byte* pReqPasswordData = msg.getPasswordData();
-    bool isValid = false;
-    Faction userFaction = NULL_FACTION;
-
-    for (auto u : _users)
-    {
-        bool ans = u.second.getName() == reqUsername;
-        Debug::log(
-            "___TEST___@validation: testing " + reqUsername +
-            "(" + std::to_string(reqUsername.size()) + ") against " + u.second.getName() + " (" +
-            std::to_string(u.second.getName().size()) + ") result: " + std::to_string(ans)
-        );
-    }
-
-    auto it = _users.find(reqUsername);
-    if (it != _users.end())
-    {
-        Debug::log("___TEST___@validation: FOUND USER!");
-        const User& user = it->second;
-        const GC_byte* userPasswordData = user.getPasswordData();
-        isValid = memcmp(pReqPasswordData, userPasswordData, USER_PASSWD_SIZE) == 0;
-        if (isValid)
-        {
-            const std::string& userFactionName = user.getFactionName();
-            if (userFactionName.size() > 0)
-            {
-                userFaction = _game.getFaction(userFactionName);
-            }
-            // Dont allow login if logged in already
-            if (user.isLoggedIn())
-            {
-                isValid = false;
-            }
-        }
-    }
-    else
-    {
-        Debug::log("___TEST___@validation: FAILED TO FIND USER!");
-    }
-    return std::make_pair(isValid, userFaction);
-}
+// TODO: delete
+// std::pair<bool, Faction> Server::validateLoginReq(const gamecommon::LoginRequest& msg) const
+// {
+//     const std::string& reqUsername = msg.getUsername();
+//     const GC_byte* pReqPasswordData = msg.getPasswordData();
+//     bool isValid = false;
+//     Faction userFaction = NULL_FACTION;
+//
+//     for (auto u : _users)
+//     {
+//         bool ans = u.second.getName() == reqUsername;
+//         Debug::log(
+//             "___TEST___@validation: testing " + reqUsername +
+//             "(" + std::to_string(reqUsername.size()) + ") against " + u.second.getName() + " (" +
+//             std::to_string(u.second.getName().size()) + ") result: " + std::to_string(ans)
+//         );
+//     }
+//
+//     auto it = _users.find(reqUsername);
+//     if (it != _users.end())
+//     {
+//         Debug::log("___TEST___@validation: FOUND USER!");
+//         const User& user = it->second;
+//         const GC_byte* userPasswordData = user.getPasswordData();
+//         isValid = memcmp(pReqPasswordData, userPasswordData, USER_PASSWD_SIZE) == 0;
+//         if (isValid)
+//         {
+//             const std::string& userFactionName = user.getFactionName();
+//             if (userFactionName.size() > 0)
+//             {
+//                 userFaction = _game.getFaction(userFactionName);
+//             }
+//             // Dont allow login if logged in already
+//             if (user.isLoggedIn())
+//             {
+//                 isValid = false;
+//             }
+//         }
+//     }
+//     else
+//     {
+//         Debug::log("___TEST___@validation: FAILED TO FIND USER!");
+//     }
+//     return std::make_pair(isValid, userFaction);
+// }
 
 void Server::trigger_shutdown()
 {
@@ -296,7 +350,7 @@ void Server::disconnectClient(const Client& client)
     std::unordered_map<std::string, Client>::const_iterator it = _clients.find(clientAddr);
     if (it != _clients.end())
     {
-        std::unordered_map<std::string, User*>::const_iterator itUserMapping = _clientUserMapping.find(clientAddr);
+        std::unordered_map<std::string, User>::const_iterator itUserMapping = _clientUserMapping.find(clientAddr);
         if (itUserMapping != _clientUserMapping.end())
             _clientUserMapping.erase(itUserMapping);
         else
@@ -321,13 +375,44 @@ void Server::updateUserData(const User& user, int32_t xPos, int32_t zPos, int32_
 {
     std::lock_guard<std::mutex> lock(_mutex);
     // TODO: Make this safer by checking can this user even be found!
-    _users[user.getName()].updateObserveProperties(xPos, zPos, observeRadius);
+    // _users[user.getName()].updateObserveProperties(xPos, zPos, observeRadius);
 }
 
 void Server::updateUserFaction(const User& user, const Faction& faction)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     // TODO: Make this safer by checking can this user even be found!
-    _users[user.getName()].setFactionName(faction.getName());
+    // _users[user.getName()].setFactionName(faction.getName());
 }
 
+std::unordered_map<std::string, std::string> Server::readConfigFile(const std::string filePath) const
+{
+    std::unordered_map<std::string, std::string> config;
+
+    std::fstream fileStream(filePath);
+    if (!fileStream.is_open())
+    {
+        Debug::log("Failed to read config file from: " + filePath);
+        return config;
+    }
+
+    std::string line = "";
+    while (std::getline(fileStream, line))
+    {
+        std::vector<std::string> lineComponents = str_util::split(line, "=");
+        if (lineComponents.size() == 0)
+            continue;
+        if (lineComponents.size() != 2)
+        {
+            Debug::log("Invalid line on config file: " + line, Debug::MessageType::ERROR);
+            continue;
+        }
+        if (lineComponents[0].empty())
+        {
+            Debug::log("Key was empty string while reading config file. Line: " + line, Debug::MessageType::ERROR);
+            continue;
+        }
+        config[lineComponents[0]] = lineComponents[1];
+    }
+    return config;
+}

@@ -179,15 +179,9 @@ void MessageHandler::handleClientMessages()
             if (readBytes > 0)
             {
                 Message msg(_pRecvBuf, readBytes, readBytes, MESSAGE_MAX_SIZE);
-                std::string rawStr(msg.getData(), msg.getDataSize());
-                Debug::log("___TEST___recv raw: " + rawStr);
-
                 Message response = processMessage(client.second, msg);
-
                 if (response != NULL_MESSAGE)
                 {
-                    //std::string rawStr(response.getData(), response.getDataSize());
-
                     std::lock_guard<std::mutex> lock(_mutex);
                     ssize_t sentBytes = send(
                         client.second.getConnSD(),

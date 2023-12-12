@@ -58,7 +58,7 @@ Game::Game(int worldWidth) :
     	int randX = std::rand() % _worldWidth;
     	int randY = std::rand() % _worldWidth;
     	if (_objUpdater->spawnObject(randX, randY, 2, neutralFaction))
-    		_testUnits.push_back(_objUpdater->accessObject(_objUpdater->accessObjects().size() - 1));
+    	    _testUnits.push_back(_objUpdater->accessObject(_objUpdater->accessObjects().size() - 1));
     }
 
     for (int y = 0; y < _worldWidth; ++y)

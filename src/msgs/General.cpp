@@ -1,5 +1,6 @@
 #include "General.h"
 #include "Server.h"
+#include "DatabaseManager.h"
 #include "../../Proj8315Common/src/messages/GeneralMessages.h"
 #include "../../Proj8315Common/src/messages/WorldMessages.h"
 #include "../../Proj8315Common/src/Faction.h"
@@ -7,6 +8,8 @@
 #include "General.h"
 #include "game/objects/Object.h"
 #include <string>
+// NOTE: only temporarely using this here!!
+#include <iostream> // -> use rather Debug
 
 using namespace gamecommon;
 
@@ -35,27 +38,118 @@ namespace msgs
         LoginRequest loginReqMsg(msg.getData(), msg.getDataSize());
         if (loginReqMsg != NULL_MESSAGE)
         {
-            const std::pair<bool, const Faction> validation = server.validateLoginReq(loginReqMsg);
-            bool success = validation.first;
-            Faction faction = validation.second;
+            Debug::log("___TEST___attempt to login user: " + loginReqMsg.getUsername());
+            const std::string usrname = loginReqMsg.getUsernameData();
+            const std::string passwd = loginReqMsg.getPasswordData();
             std::string errorMessage = "";
-            if (!success)
+            bool success = false;
+            QueryResult result = DatabaseManager::exec_query(
+                "SELECT * FROM users WHERE name='" + usrname + "' AND password='" + passwd + "';"
+            );
+            if (result.status == QUERY_STATUS__SUCCESS)
             {
-                errorMessage = "Invalid username or password";
-                faction = NULL_FACTION;
+                if (result.result.size() == 0)
+                {
+                    Debug::log("Failed to login user due to invalid username or password");
+                    errorMessage = "Invalid username or password";
+                }
+                else if (result.result.size() != 1)
+                {
+                    // NOTE: This should never be able to happen due to unique constraint
+                    Debug::log(
+                        "Multiple users found with name: " + usrname,
+                        Debug::MessageType::FATAL_ERROR
+                    );
+                    return NULL_MESSAGE;
+                }
+                else
+                {
+                    Debug::log("___TEST___user login status = " + std::string(result.result[0]["logged_in"].c_str()));
+                    if (result.getValue<bool>(0, DATABASE_COLUMN__USERS__LOGGED_IN))
+                    {
+                        Debug::log("Failed to login user due to user being logged in already");
+                        errorMessage = "Failed to login";
+                    }
+                    else
+                    {
+                        std::string dbUserID = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__ID);
+                        std::string dbUsername = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__NAME);
+                        int tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
+                        int tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
+                        User user(dbUserID, dbUsername.data(), dbUsername.size(), tileX, tileZ);
+
+                        // TODO
+                        Debug::log("___TEST___LOGIN SUCCESS: constructed user = " + user.getID() + " : " + user.getName());
+
+                        QueryResult setLoggedInResult = DatabaseManager::exec_query(
+                            "UPDATE users SET logged_in=TRUE WHERE id='" + dbUserID + "';"
+                        );
+                        if (setLoggedInResult.status == QUERY_STATUS__SUCCESS)
+                        {
+                            server.loginUser(client, user);
+                            success = true;
+                        }
+                        else
+                        {
+                            errorMessage = "Database error: Failed to assign user login status";
+                        }
+                    }
+                }
             }
-            if (!server.loginUser(client, loginReqMsg.getUsername()))
+            else if(result.status == QUERY_STATUS__SYNTAX_ERROR)
             {
-                Debug::log("User login validation was successful but server refused to make ClientAddress - User pair @server::loginUser", Debug::MessageType::ERROR);
-                errorMessage = "Failed to login";
-                faction = NULL_FACTION;
-                success = false;
+                Debug::log(
+                    "User login failed due to query syntax error: " + result.errorMsg,
+                    Debug::MessageType::ERROR
+                );
+                errorMessage = "Internal server error";
             }
-            LoginResponse resp(success, faction, errorMessage.data(), errorMessage.size());
-            return resp;
+            else if(result.status == QUERY_STATUS__CONNECTION_ERROR)
+            {
+                Debug::log(
+                    "User login failed due to database connection error: " + result.errorMsg,
+                    Debug::MessageType::ERROR
+                );
+                errorMessage = "Internal server error";
+            }
+            else if(result.status == QUERY_STATUS__UNEXPECTED_ERROR)
+            {
+                Debug::log(
+                    "User login failed due to unexpected query error: " + result.errorMsg,
+                    Debug::MessageType::ERROR
+                );
+                errorMessage = "Internal server error";
+            }
+            return LoginResponse(
+                success,
+                NULL_FACTION,
+                errorMessage
+            );
         }
         Debug::log("Failed to construct LoginRequest message from incoming data", Debug::MessageType::WARNING);
         return NULL_MESSAGE;
+
+        //     // OLD BELOW -> DELETE!
+        //     const std::pair<bool, const Faction> validation = server.validateLoginReq(loginReqMsg);
+        //     bool success = validation.first;
+        //     Faction faction = validation.second;
+        //     if (!success)
+        //     {
+        //         errorMessage = "Invalid username or password";
+        //         faction = NULL_FACTION;
+        //     }
+        //     if (!server.loginUser(client, loginReqMsg.getUsername(), loginReqMsg.getPassword()))
+        //     {
+        //         Debug::log("User login validation was successful but server refused to make ClientAddress - User pair @server::loginUser", Debug::MessageType::ERROR);
+        //         errorMessage = "Failed to login";
+        //         faction = NULL_FACTION;
+        //         success = false;
+        //     }
+        //     LoginResponse resp(success, faction, errorMessage);
+        //     return resp;
+        // }
+        // Debug::log("Failed to construct LoginRequest message from incoming data", Debug::MessageType::WARNING);
+        // return NULL_MESSAGE;
     }
 
 
@@ -64,32 +158,53 @@ namespace msgs
         UserRegisterRequest registerReqMsg(msg.getData(), msg.getDataSize());
         if (registerReqMsg != NULL_MESSAGE)
         {
-            const std::string usrname = registerReqMsg.getUsername();
-            const std::string passwd = registerReqMsg.getPassword();
-            const std::string repasswd = registerReqMsg.getRePassword();
+            const std::string usrname = registerReqMsg.getUsernameData();
+            const std::string passwd = registerReqMsg.getPasswordData();
+            const std::string repasswd = registerReqMsg.getRePasswordData();
             std::string errorMessage = "";
-            GC_byte success = 1;
+            bool success = false;
 
-            // Validate received username doesn't exist
-            if (server.getUser(usrname) != NULL_USER)
-            {
-                Debug::log("User registering failed due to username: " + usrname + " already exists");
-                errorMessage = "Invalid username";
-                success = 0;
-            }
             // Validate received passwords match
-            else if (passwd != repasswd)
+            if (passwd != repasswd)
             {
                 Debug::log("User registering failed due to received passwords didn't match");
                 errorMessage = "Passwords needs to match";
-                success = 0;
+            }
+            else
+            {
+                QueryResult result = DatabaseManager::exec_query(
+                    "INSERT INTO users(name, password) VALUES('" + usrname + "', '" + passwd + "');"
+                );
+                switch (result.status)
+                {
+                    case QUERY_STATUS__SUCCESS:
+                        success = true;
+                        break;
+                    case QUERY_STATUS__UNIQUE_VIOLATION:
+                        Debug::log("User registering failed due to username: " + usrname + " already exists");
+                        errorMessage = "Invalid username";
+                        break;
+                    case QUERY_STATUS__SYNTAX_ERROR:
+                        Debug::log("User registering failed due to query syntax error: " + result.errorMsg);
+                        errorMessage = "Internal server error";
+                        break;
+                    case QUERY_STATUS__CONNECTION_ERROR:
+                        Debug::log("User registering failed due to database connection error: " + result.errorMsg);
+                        errorMessage = "Internal server error";
+                        break;
+                    case QUERY_STATUS__UNEXPECTED_ERROR:
+                        Debug::log("User registering failed due to unexpected query error: " + result.errorMsg);
+                        errorMessage = "Internal server error";
+                        break;
+                }
             }
             if (success)
             {
                 Debug::log("New user registered: " + usrname + " name size=" + std::to_string(usrname.size()));
-                server.createUser(client, usrname.data(), usrname.size(), passwd.data(), passwd.size());
+                // TODO: delete
+                // server.createUser(client, usrname.data(), usrname.size(), passwd.data(), passwd.size());
             }
-            return UserRegisterResponse(success, errorMessage.data());
+            return UserRegisterResponse(success, errorMessage);
         }
         return NULL_MESSAGE;
     }
@@ -97,6 +212,7 @@ namespace msgs
 
     Message fetch_obj_type_lib(Server& server, const Client& client, Message& msg)
     {
+        Debug::log("___TEST___User requested obj info lib!");
         return ObjInfoLibMsg(Game::get()->getObjInfoLib());
     }
 

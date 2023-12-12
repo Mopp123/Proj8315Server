@@ -19,6 +19,9 @@ namespace world
     {
         std::vector<gamecommon::ObjectInfo> load_obj_info_file(const std::string& filePath);
 
+        // Initializes Object Info Lib from database
+        std::vector<gamecommon::ObjectInfo> init_obj_info_db(const std::string& filePath);
+
         class ObjectInstanceData
         {
         private:

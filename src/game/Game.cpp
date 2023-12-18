@@ -47,7 +47,8 @@ Game::Game(int worldWidth) :
     _factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
 
     // initialize object types "library"
-    _objectInfo = world::objects::load_obj_info_file("data/objects-conf.txt");
+    // _objectInfo = world::objects::load_obj_info_file("data/objects-conf.txt"); // NOTE: <- Old way of loading this TODO: delete
+    _objectInfo = world::objects::load_obj_info_db();
     // determine total size of the objLib in bytes
     _totalObjInfoSize = _objectInfo.size() * get_netw_objinfo_size();
     _objInfoInitialized = true;

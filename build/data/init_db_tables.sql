@@ -23,6 +23,7 @@ CREATE TABLE factions (
 -- Objects (obj infos/templates)
 CREATE TABLE objects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type_id INTEGER UNIQUE NOT NULL,
     name VARCHAR(32) UNIQUE NOT NULL,
     description VARCHAR(64),
     stats_speed INTEGER DEFAULT 0,
@@ -34,16 +35,7 @@ CREATE TABLE objects (
 );
 
 INSERT INTO objects(
-    name,
-    description,
-    stats_speed
-) VALUES(
-    'Empty',
-    'Nothingness...',
-    0
-);
-
-INSERT INTO objects(
+    type_id,
     name,
     description,
     stats_speed,
@@ -51,18 +43,28 @@ INSERT INTO objects(
 )
 VALUES
 (
+    0,
+    'Empty',
+    'Nothingness...',
+    0,
+    '{}'
+),
+(
+    1,
     'Tree1',
     'Testing tree object here...',
     0,
     '{}'
 ),
 (
+    2,
     'Movement Test',
     'For testing movement stuff',
     2,
     '{}'
 ),
 (
+    3,
     'Ship Test',
     'For testing ship landing',
     2,

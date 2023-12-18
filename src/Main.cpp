@@ -1,19 +1,31 @@
 #include "Server.h"
 #include "DatabaseManager.h"
-#include "pqxx/pqxx"
 
 #include <iostream>
 #include <string>
 
 
-
-
 int main(const int argc, const char** argv)
 {
+    // NOTE: Only temporarely connecting db here atm
+    //  -> This is because Server's constrcutor creates "Game" and game's constructor needs db connection.
+    // TODO: Figure out better way of handling this!
+    if (!DatabaseManager::connect("127.0.0.1", 5432, "test_db", "postgres", "asd"))
+    {
+        Debug::log(
+            "Failed to create server due to database connection error",
+            Debug::MessageType::FATAL_ERROR
+        );
+        return 1;
+    }
+    Debug::log(
+        "Database connection established successfully"
+    );
 
     Server server("data/server-conf.txt", 1024);
 
     // TESTING
+    /*
     std::vector<std::vector<std::string>> arrs;
     QueryResult result = DatabaseManager::exec_query(
         "SELECT action_slot FROM objects;"
@@ -33,6 +45,7 @@ int main(const int argc, const char** argv)
         ++i;
     }
     return 0;
+    */
     // ---
 
     server.beginMsgHandler();

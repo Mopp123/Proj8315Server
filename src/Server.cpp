@@ -87,37 +87,18 @@ Server::Server(const std::string configFilePath, size_t maxClientCount) :
     Debug::log("Started server on port: " + std::to_string(_port));
 
     // Establish database connection
-    if (!DatabaseManager::connect("127.0.0.1", 5432, "test_db", "postgres", "asd"))
-    {
-        Debug::log(
-            "Failed to create server due to database connection error",
-            Debug::MessageType::FATAL_ERROR
-        );
-        return;
-    }
-
-    // std::string testSql = "SELECT * FROM users;";
-    // QueryResult queryResult = DatabaseManager::exec_query(testSql);
-    // if (queryResult.success)
-    //     std::cout << "___TEST___query was successful!\n";
-    // else
+    // if (!DatabaseManager::connect("127.0.0.1", 5432, "test_db", "postgres", "asd"))
     // {
-    //     if (queryResult.error == QUERY_ERR__UNIQUE_VIOLATION)
-    //         std::cout << "___TEST___ERROR! Username already taken!\n";
+    //     Debug::log(
+    //         "Failed to create server due to database connection error",
+    //         Debug::MessageType::FATAL_ERROR
+    //     );
+    //     return;
     // }
+    // Debug::log(
+    //     "Database connection established successfully"
+    // );
 
-    // std::vector<gamecommon::User> users;
-    // for (auto const &row : queryResult.result)
-    // {
-    //     std::string name(row["name"].c_str(), row["name"].size());
-    //     std::string password(row["password"].c_str(), row["password"].size());
-
-    //     gamecommon::User user(name.data(), name.size(), password.data(), password.size());
-    //     users.push_back(user);
-    // }
-    // std::cout << "___TEST___created users:\n";
-    // for (const gamecommon::User& user : users)
-    //     std::cout << "    " << user.getName() << std::endl;
 
 
     // TESTING!

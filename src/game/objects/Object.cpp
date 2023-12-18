@@ -78,35 +78,46 @@ namespace world
         }
 
 
-        std::vector<gamecommon::ObjectInfo> init_obj_info_db(const std::string& filePath)
+        std::vector<gamecommon::ObjectInfo> load_obj_info_db()
         {
             std::vector<gamecommon::ObjectInfo> objInfoLib;
 
             QueryResult queryResult = DatabaseManager::exec_query(
                 "SELECT * FROM objects;"
             );
+            std::vector<std::vector<std::string>> resultActionSlots = queryResult.getArray<std::string>(DATABASE_COLUMN__OBJECTS__ACTION_SLOT);
             switch (queryResult.status)
             {
                 case QUERY_STATUS__SUCCESS:
                     for (int i = 0; i < queryResult.result.size(); ++i)
                     {
-                        const std::string& name = queryResult.getValue<std::string>(
+                        const int typeID = queryResult.getValue<int>(
+                            i, DATABASE_COLUMN__OBJECTS__TYPE_ID
+                        );
+                        const std::string name = queryResult.getValue<std::string>(
                             i, DATABASE_COLUMN__OBJECTS__NAME
                         );
-                        const std::string& description = queryResult.getValue<std::string>(
+                        const std::string description = queryResult.getValue<std::string>(
                             i, DATABASE_COLUMN__OBJECTS__DESCRIPTION
                         );
+                        const int speedStat = queryResult.getValue<int>(
+                            i, DATABASE_COLUMN__OBJECTS__STATS_SPEED
+                        );
+                        std::vector<std::string> actionSlots;
+                        if (resultActionSlots.size() > (size_t)i)
+                            actionSlots = resultActionSlots[i];
 
-                        // std::vector<std::string> actions;
-                        // for (int i = 0; i < TILE_STATE_MAX_action + 1; ++i)
-                        //     actions.push_back(rawInfo[2 + i]);
+                        uint64_t initialTileState = 0;
+                        gamecommon::set_tile_thingid(initialTileState, typeID);
 
-                        // GC_ubyte speed = (GC_ubyte)std::stoi(rawInfo[2 + (TILE_STATE_MAX_action + 1)]);
-
-                        // uint64_t initialTileState = 0;
-                        // gamecommon::set_tile_thingid(initialTileState, i);
-
-                        // allObjectInfo.push_back({name, description, actions, speed, initialTileState});
+                        ObjectInfo objInfo(
+                            name,
+                            description,
+                            actionSlots,
+                            (GC_ubyte)speedStat,
+                            initialTileState
+                        );
+                        objInfoLib.push_back(objInfo);
                     }
                     break;
                 case QUERY_STATUS__SYNTAX_ERROR:

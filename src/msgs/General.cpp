@@ -38,7 +38,7 @@ namespace msgs
         LoginRequest loginReqMsg(msg.getData(), msg.getDataSize());
         if (loginReqMsg != NULL_MESSAGE)
         {
-            Debug::log("___TEST___attempt to login user: " + loginReqMsg.getUsername());
+            Debug::log("Attempting login user: " + loginReqMsg.getUsername());
             const std::string usrname = loginReqMsg.getUsernameData();
             const std::string passwd = loginReqMsg.getPasswordData();
             std::string errorMessage = "";
@@ -64,7 +64,6 @@ namespace msgs
                 }
                 else
                 {
-                    Debug::log("___TEST___user login status = " + std::string(result.result[0]["logged_in"].c_str()));
                     if (result.getValue<bool>(0, DATABASE_COLUMN__USERS__LOGGED_IN))
                     {
                         Debug::log("Failed to login user due to user being logged in already");
@@ -77,9 +76,6 @@ namespace msgs
                         int tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
                         int tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
                         User user(dbUserID, dbUsername.data(), dbUsername.size(), tileX, tileZ);
-
-                        // TODO
-                        Debug::log("___TEST___LOGIN SUCCESS: constructed user = " + user.getID() + " : " + user.getName());
 
                         QueryResult setLoggedInResult = DatabaseManager::exec_query(
                             "UPDATE users SET logged_in=TRUE WHERE id='" + dbUserID + "';"
@@ -128,28 +124,6 @@ namespace msgs
         }
         Debug::log("Failed to construct LoginRequest message from incoming data", Debug::MessageType::WARNING);
         return NULL_MESSAGE;
-
-        //     // OLD BELOW -> DELETE!
-        //     const std::pair<bool, const Faction> validation = server.validateLoginReq(loginReqMsg);
-        //     bool success = validation.first;
-        //     Faction faction = validation.second;
-        //     if (!success)
-        //     {
-        //         errorMessage = "Invalid username or password";
-        //         faction = NULL_FACTION;
-        //     }
-        //     if (!server.loginUser(client, loginReqMsg.getUsername(), loginReqMsg.getPassword()))
-        //     {
-        //         Debug::log("User login validation was successful but server refused to make ClientAddress - User pair @server::loginUser", Debug::MessageType::ERROR);
-        //         errorMessage = "Failed to login";
-        //         faction = NULL_FACTION;
-        //         success = false;
-        //     }
-        //     LoginResponse resp(success, faction, errorMessage);
-        //     return resp;
-        // }
-        // Debug::log("Failed to construct LoginRequest message from incoming data", Debug::MessageType::WARNING);
-        // return NULL_MESSAGE;
     }
 
 

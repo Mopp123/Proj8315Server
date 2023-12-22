@@ -43,6 +43,8 @@ namespace msgs
             const std::string passwd = loginReqMsg.getPasswordData();
             std::string errorMessage = "";
             bool success = false;
+            Faction userFaction = NULL_FACTION;
+
             QueryResult result = DatabaseManager::exec_query(
                 "SELECT * FROM users WHERE name='" + usrname + "' AND password='" + passwd + "';"
             );
@@ -84,6 +86,53 @@ namespace msgs
                         {
                             server.loginUser(client, user);
                             success = true;
+
+                            // Get user's faction if exists
+                            QueryResult userFactionResult = DatabaseManager::exec_query(
+                                "SELECT * FROM factions WHERE user_id = '" + dbUserID + "';"
+                            );
+                            if (userFactionResult.status == QUERY_STATUS__SUCCESS)
+                            {
+                                // NOTE: Currently user can have only one faction!
+                                if (userFactionResult.result.size() > 1)
+                                {
+                                    Debug::log(
+                                        "Failed to login user due to user having multiple factions. Currently this is prohibited",
+                                        Debug::MessageType::FATAL_ERROR
+                                    );
+                                    success = false;
+                                    errorMessage = "Internal server error";
+                                }
+                                else if (userFactionResult.result.size() == 1)
+                                {
+                                    int factionInGameID = userFactionResult.getValue<int>(0, DATABASE_COLUMN__FACTIONS__GAME_ID);
+                                    std::string factionName = userFactionResult.getValue<std::string>(0, DATABASE_COLUMN__FACTIONS__NAME);
+                                    if (factionName.size() == 0 || factionName == "")
+                                    {
+                                        Debug::log(
+                                            "Failed to login user due to user faction name being empty string",
+                                            Debug::MessageType::FATAL_ERROR
+                                        );
+                                        success = false;
+                                        errorMessage = "Internal server error";
+                                    }
+                                    else
+                                    {
+                                        userFaction = Faction(factionName.data(), factionName.size(), (uint32_t)factionInGameID);
+                                        user.setFactionName(factionName);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Debug::log(
+                                    "Failed to login user due to error in Faction Query. Error message: " + userFactionResult.errorMsg,
+                                    Debug::MessageType::FATAL_ERROR
+                                );
+                                success = false;
+                                errorMessage = "Internal server error";
+                            }
+
                         }
                         else
                         {
@@ -116,9 +165,10 @@ namespace msgs
                 );
                 errorMessage = "Internal server error";
             }
+
             return LoginResponse(
                 success,
-                NULL_FACTION,
+                userFaction,
                 errorMessage
             );
         }
@@ -187,7 +237,7 @@ namespace msgs
     Message fetch_obj_type_lib(Server& server, const Client& client, Message& msg)
     {
         Debug::log("___TEST___User requested obj info lib!");
-        return ObjInfoLibMsg(Game::get()->getObjInfoLib());
+        return ObjInfoLibResponse(Game::get()->getObjInfoLib());
     }
 
 

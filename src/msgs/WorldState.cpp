@@ -1,6 +1,7 @@
 #include "WorldState.h"
 #include "Server.h"
 #include "game/Game.h"
+#include "../../Proj8315Common/src/messages/WorldMessages.h"
 
 
 using namespace gamecommon;
@@ -14,6 +15,21 @@ namespace msgs
 
     Message create_new_faction(Server& server, const Client& client, Message& msg)
     {
+        Debug::log("___TEST___attempting create new faction for user...");
+        CreateFactionRequest createFactionReq(msg.getData(), msg.getDataSize());
+
+        if (createFactionReq != NULL_MESSAGE)
+        {
+            return Game::get()->addFaction(
+                server,
+                client,
+                createFactionReq.getName()
+            );
+        }
+        return NULL_MESSAGE;
+
+        // OLD BELOW!!
+        /*
         const size_t msgSize = msg.getDataSize();
         if(msgSize >= MESSAGE_MIN_DATA_SIZE + FACTION_NAME_SIZE)
         {
@@ -34,6 +50,7 @@ namespace msgs
         {
             return NULL_MESSAGE;
         }
+        */
     }
 
     Message edit_faction(Server& server, const Client& client, Message& msg)

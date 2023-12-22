@@ -153,8 +153,8 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerMessage, msgs::get_server_message));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserLogin, msgs::user_login));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegister, msgs::user_register));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ObjInfoLib, msgs::fetch_obj_type_lib));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFaction, msgs::create_new_faction));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ObjInfoLibRequest, msgs::fetch_obj_type_lib));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFactionRequest, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetAllFactions, msgs::get_all_factions));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));

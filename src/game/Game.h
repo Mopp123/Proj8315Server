@@ -60,7 +60,7 @@ public:
     void run();
     void resetChangedFactionsStatus();
 
-    gamecommon::Message addFaction(Server& server, const Client& client, GC_byte* nameData, size_t nameSize);
+    gamecommon::Message addFaction(Server& server, const Client& client, const std::string factionName);
     // Returns current "dynamic" world state
     gamecommon::Message getWorldState(int xPos, int zPos, int observeRadius) const;
     // Returns all factions' data

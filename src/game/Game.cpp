@@ -8,6 +8,7 @@
 #include "objects/Object.h"
 #include "objects/ObjectUpdater.h"
 #include "world/WorldGenerator.h"
+#include "DatabaseManager.h"
 #include "../Debug.h"
 
 #include <cstring>
@@ -41,7 +42,7 @@ Game::Game(int worldWidth) :
     const std::string neutralFactionName = "Neutral";
     GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
     memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
-    Faction neutralFaction(neutralFactionName.data(), neutralFactionName.size());
+    Faction neutralFaction(neutralFactionName.data(), neutralFactionName.size(), 1);
     neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
     neutralFaction.markUpdated(false);
     _factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
@@ -150,18 +151,16 @@ void Game::resetChangedFactionsStatus()
     }
 }
 
-Message Game::addFaction(Server& server, const Client& client, GC_byte* nameData, size_t nameSize)
+Message Game::addFaction(Server& server, const Client& client, const std::string factionName)
 {
-    std::string factionNameStr(nameData, nameSize);
-    Debug::log("Attempting to create faction: " + factionNameStr);
-
-    GC_byte success = 0;
+    Debug::log("Attempting to create faction: " + factionName);
+    bool success = false;
     Faction faction = NULL_FACTION;
 
     std::string errorMessage = "";
 
     std::lock_guard<std::mutex> lock(_mutex_faction);
-    auto iter = _factions.find(factionNameStr);
+    auto iter = _factions.find(factionName);
     if(iter == _factions.end())
     {
         const User owner = server.getUser(client);
@@ -179,30 +178,41 @@ Message Game::addFaction(Server& server, const Client& client, GC_byte* nameData
         }
         else
         {
-            Faction newFaction(nameData, nameSize);
-            faction = newFaction;
-            _factions.insert(std::make_pair(factionNameStr, newFaction));
-            Debug::log("New faction created successfully. Current faction count: " + std::to_string(_factions.size()));
-            server.updateUserFaction(owner, faction);
-            success = 1;
+            // Attempt inserting into db before adding to actual "game world"
+            User user = server.getUser(client);
+            if (user != NULL_USER)
+            {
+                uint32_t newFactionID = _factions.size() + 1;
+                QueryResult insertFactionResult = DatabaseManager::exec_query(
+                    "INSERT INTO factions(game_id, user_id, name) VALUES('" + std::to_string(newFactionID) + "', '" + user.getID() + "', '" + factionName + "');"
+                );
+                if (insertFactionResult.status == QUERY_STATUS__SUCCESS)
+                {
+                    // TODO: Better way of determining faction id
+                    //  -> This causes issues if factions are deleted -> multiple factions may end up sharing same id!
+                    Faction newFaction(factionName.data(), factionName.size(), newFactionID);
+                    faction = newFaction;
+                    _factions.insert(std::make_pair(factionName, newFaction));
+                    Debug::log("New faction created successfully. Current faction count: " + std::to_string(_factions.size()));
+                    server.updateUserFaction(owner, faction);
+                    success = true;
+                }
+                else
+                {
+                    Debug::log(
+                        "Failed to add new faction. Database error: " + insertFactionResult.errorMsg,
+                        Debug::MessageType::FATAL_ERROR
+                    );
+                    errorMessage = "Internal server error";
+                }
+            }
         }
     }
     else
     {
         errorMessage = "Faction with this name already exists";
     }
-
-    int32_t msgType = MESSAGE_TYPE__CreateFaction;
-    size_t factionSize = Faction::get_netw_size();
-    size_t bufSize = sizeof(int32_t) + 1 + Faction::get_netw_size() + MESSAGE_ERR_STR_SIZE;
-    GC_byte pBuf[bufSize];
-    memset(pBuf, 0, bufSize);
-    memcpy(pBuf, &msgType, sizeof(int32_t));
-    memcpy(pBuf + sizeof(int32_t), &success, 1);
-    memcpy(pBuf + sizeof(int32_t) + 1, faction.getNetwData(), factionSize);
-    memcpy(pBuf + sizeof(int32_t) + 1 + factionSize, errorMessage.data(), errorMessage.size());
-
-    return Message(pBuf, bufSize, bufSize);
+    return CreateFactionResponse(success, errorMessage, faction);
 }
 
 Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
@@ -277,6 +287,7 @@ Message Game::getAllFactions() const
 // TODO: Create message of type "GetChangedFactions" which takes just takes changed factions as parameter
 Message Game::getChangedFactions() const
 {
+    /*
     std::lock_guard<std::mutex> lock(_mutex_worldState);
     std::vector<Faction> changedFactions;
     for (auto& faction : _factions)
@@ -303,6 +314,8 @@ Message Game::getChangedFactions() const
     }
     // NOTE: just a hack atm
     return Message(buf, bufSize, bufSize);
+    */
+    return NULL_MESSAGE;
 }
 
 const std::vector<ObjectInfo>& Game::getObjInfoLib()

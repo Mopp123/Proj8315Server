@@ -42,7 +42,7 @@ private:
     // std::unordered_map<std::string, gamecommon::User> _users; // TODO: Delete this (Unnecessary after db integration)
 
     // Logged in client addr - user mapping
-    std::unordered_map<std::string, gamecommon::User> _clientUserMapping; // TODO: Construct user into this mapping (instead of pointing to _users) when user logs in
+    std::unordered_map<std::string, gamecommon::User> _clientUserMapping;
 
     static bool s_shutdown;
 

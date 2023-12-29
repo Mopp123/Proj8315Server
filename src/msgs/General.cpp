@@ -33,6 +33,7 @@ namespace msgs
     }
 
 
+    // TODO: Injection prevention
     Message user_login(Server& server, const Client& client, Message& msg)
     {
         LoginRequest loginReqMsg(msg.getData(), msg.getDataSize());
@@ -105,12 +106,13 @@ namespace msgs
                                 }
                                 else if (userFactionResult.result.size() == 1)
                                 {
-                                    int factionInGameID = userFactionResult.getValue<int>(0, DATABASE_COLUMN__FACTIONS__GAME_ID);
+                                    std::string factionID = userFactionResult.getValue<std::string>(0, DATABASE_COLUMN__FACTIONS__ID);
                                     std::string factionName = userFactionResult.getValue<std::string>(0, DATABASE_COLUMN__FACTIONS__NAME);
-                                    if (factionName.size() == 0 || factionName == "")
+                                    Debug::log("___TEST___FOUND FACTION: " + factionName + " for user");
+                                    if (factionName.size() == 0 || factionName == "" || factionID.size() == 0 || factionID == "")
                                     {
                                         Debug::log(
-                                            "Failed to login user due to user faction name being empty string",
+                                            "Failed to login user due to user faction name or id being empty string",
                                             Debug::MessageType::FATAL_ERROR
                                         );
                                         success = false;
@@ -118,7 +120,7 @@ namespace msgs
                                     }
                                     else
                                     {
-                                        userFaction = Faction(factionName.data(), factionName.size(), (uint32_t)factionInGameID);
+                                        userFaction = Faction(factionID, factionName);
                                         user.setFactionName(factionName);
                                     }
                                 }

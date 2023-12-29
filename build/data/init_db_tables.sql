@@ -14,7 +14,6 @@ CREATE TABLE users (
 -- Factions
 CREATE TABLE factions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_id INTEGER UNIQUE NOT NULL, -- Used to identify the faction in the "dynamic Game world"
     user_id UUID,
     name VARCHAR(32) UNIQUE NOT NULL,
     deployments INTEGER ARRAY[16] DEFAULT '{}',

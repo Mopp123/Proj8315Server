@@ -15,7 +15,6 @@ namespace msgs
 
     Message create_new_faction(Server& server, const Client& client, Message& msg)
     {
-        Debug::log("___TEST___attempting create new faction for user...");
         CreateFactionRequest createFactionReq(msg.getData(), msg.getDataSize());
 
         if (createFactionReq != NULL_MESSAGE)
@@ -27,30 +26,6 @@ namespace msgs
             );
         }
         return NULL_MESSAGE;
-
-        // OLD BELOW!!
-        /*
-        const size_t msgSize = msg.getDataSize();
-        if(msgSize >= MESSAGE_MIN_DATA_SIZE + FACTION_NAME_SIZE)
-        {
-            const GC_byte* data = msg.getData();
-
-            GC_byte factionNameData[FACTION_NAME_SIZE];
-            memset(factionNameData, 0, FACTION_NAME_SIZE);
-            memcpy(factionNameData, data + MESSAGE_ENTRY_SIZE__header, FACTION_NAME_SIZE);
-
-            return Game::get()->addFaction(
-                server,
-                client,
-                factionNameData,
-                FACTION_NAME_SIZE
-            );
-        }
-        else
-        {
-            return NULL_MESSAGE;
-        }
-        */
     }
 
     Message edit_faction(Server& server, const Client& client, Message& msg)

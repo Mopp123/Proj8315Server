@@ -42,7 +42,7 @@ Game::Game(int worldWidth) :
     const std::string neutralFactionName = "Neutral";
     GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
     memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
-    Faction neutralFaction(neutralFactionName.data(), neutralFactionName.size(), 1);
+    Faction neutralFaction("", neutralFactionName);
     neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
     neutralFaction.markUpdated(false);
     _factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
@@ -53,6 +53,17 @@ Game::Game(int worldWidth) :
     // determine total size of the objLib in bytes
     _totalObjInfoSize = _objectInfo.size() * get_netw_objinfo_size();
     _objInfoInitialized = true;
+
+    // Load factions from db if server was reset
+    QueryResult factionsResult = DatabaseManager::exec_query(
+        "SELECT * FROM factions;"
+    );
+    Debug::log("___TEST___LOADING EXISTING FACTIONS (" + std::to_string(factionsResult.result.size()) + ")");
+    for (int i = 0; i <  factionsResult.result.size(); ++i)
+    {
+        std::string factionName = factionsResult.getValue<std::string>(i, DATABASE_COLUMN__FACTIONS__NAME);
+        Debug::log("    " + factionName);
+    }
 
     // Testing movement with these objs
     for (int i = 0; i < 1000; ++i)
@@ -182,15 +193,26 @@ Message Game::addFaction(Server& server, const Client& client, const std::string
             User user = server.getUser(client);
             if (user != NULL_USER)
             {
-                uint32_t newFactionID = _factions.size() + 1;
+                // uint32_t newFactionID = _factions.size() + 1;
+                // Debug::log(
+                //     std::to_string(newFactionID) +
+                //     ", " +
+                //     user.getID() +
+                //     ", '" +
+                //     factionName + "'); Faction name size: " +
+                //     std::to_string(factionName.size()) +
+                //     " Faction name length: " + std::to_string(factionName.length())
+                // );
+
                 QueryResult insertFactionResult = DatabaseManager::exec_query(
-                    "INSERT INTO factions(game_id, user_id, name) VALUES('" + std::to_string(newFactionID) + "', '" + user.getID() + "', '" + factionName + "');"
+                    "INSERT INTO factions(user_id, name) VALUES('" + user.getID() + "', '" + factionName + "') RETURNING id;"
                 );
-                if (insertFactionResult.status == QUERY_STATUS__SUCCESS)
+                if (insertFactionResult.status == QUERY_STATUS__SUCCESS && insertFactionResult.result.size() == 1)
                 {
-                    // TODO: Better way of determining faction id
-                    //  -> This causes issues if factions are deleted -> multiple factions may end up sharing same id!
-                    Faction newFaction(factionName.data(), factionName.size(), newFactionID);
+                    Faction newFaction(
+                        insertFactionResult.getValue<std::string>(0, DATABASE_COLUMN__FACTIONS__ID),
+                        factionName
+                    );
                     faction = newFaction;
                     _factions.insert(std::make_pair(factionName, newFaction));
                     Debug::log("New faction created successfully. Current faction count: " + std::to_string(_factions.size()));
@@ -210,7 +232,9 @@ Message Game::addFaction(Server& server, const Client& client, const std::string
     }
     else
     {
-        errorMessage = "Faction with this name already exists";
+        const std::string errStr = "Faction with this name already exists";
+        Debug::log("Failed to create faction: " + factionName + " " + errStr);
+        errorMessage = errStr;
     }
     return CreateFactionResponse(success, errorMessage, faction);
 }

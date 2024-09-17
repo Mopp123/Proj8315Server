@@ -11,6 +11,7 @@ CREATE TABLE users (
     tile_z INTEGER DEFAULT 0
 );
 
+
 -- Factions
 CREATE TABLE factions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -19,6 +20,16 @@ CREATE TABLE factions (
     deployments INTEGER ARRAY[16] DEFAULT '{}',
     CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+INSERT INTO factions (
+    user_id,
+    name
+)
+VALUES (
+    NULL,
+    'Neutral'
+);
+
 
 -- Objects (obj infos/templates)
 CREATE TABLE objects (
@@ -34,15 +45,14 @@ CREATE TABLE objects (
     action_slot VARCHAR(16) ARRAY[8] DEFAULT '{}'
 );
 
-INSERT INTO objects(
+INSERT INTO objects (
     type_id,
     name,
     description,
     stats_speed,
     action_slot
 )
-VALUES
-(
+VALUES (
     0,
     'Empty',
     'Nothingness...',

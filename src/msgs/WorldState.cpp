@@ -10,13 +10,13 @@ namespace msgs
 {
     Message get_all_factions(Server& server, const Client& client, Message& msg)
     {
-        return Game::get()->getAllFactions();
+        Message response = Game::get()->getAllFactions();
+        return response;
     }
 
     Message create_new_faction(Server& server, const Client& client, Message& msg)
     {
         CreateFactionRequest createFactionReq(msg.getData(), msg.getDataSize());
-
         if (createFactionReq != NULL_MESSAGE)
         {
             return Game::get()->addFaction(

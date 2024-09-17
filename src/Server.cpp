@@ -223,15 +223,6 @@ std::unordered_map<std::string, Client> Server::getClientConnections() const
     return _clients;
 }
 
-// User Server::getUser(const std::string& name)
-// {
-//     std::lock_guard<std::mutex> lock(_mutex);
-//     auto it = _users.find(name);
-//     if (it != _users.end())
-//         return it->second;
-//     return NULL_USER;
-// }
-
 User Server::getUser(const Client& client)
 {
     std::lock_guard<std::mutex> lock(_mutex);
@@ -352,10 +343,12 @@ void Server::disconnectClient(const Client& client)
     }
 }
 
-void Server::updateUserData(const User& user, int32_t xPos, int32_t zPos, int32_t observeRadius)
+void Server::updateUserData(const Client& client, int32_t xPos, int32_t zPos, int32_t observeRadius)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     // TODO: Make this safer by checking can this user even be found!
+    _clientUserMapping[client.getAddress()].updateObserveProperties(xPos, zPos, observeRadius);
+
     // _users[user.getName()].updateObserveProperties(xPos, zPos, observeRadius);
 }
 

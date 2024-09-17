@@ -259,27 +259,8 @@ namespace msgs
         UpdateObserverMsg updateMsg(msg.getData(), msg.getDataSize());
         if (updateMsg != NULL_MESSAGE)
         {
-            server.updateUserData(user, updateMsg.getX(), updateMsg.getZ(), updateMsg.getRadius());
+            server.updateUserData(client, updateMsg.getX(), updateMsg.getZ(), updateMsg.getRadius());
         }
-
-        // OLD BELOW
-        /*
-        const size_t msgSize = msg.getDataSize();
-        if(msgSize == sizeof(int32_t) * 4)
-        {
-            int32_t xPos = 0;
-            int32_t zPos = 0;
-            int32_t observeRadius = 0;
-
-            const GC_byte* msgData = msg.getData();
-
-            memcpy((void*)&xPos, (const void*)(msgData + MESSAGE_ENTRY_SIZE__header), sizeof(int32_t));
-            memcpy((void*)&zPos, (const void*)(msgData + MESSAGE_ENTRY_SIZE__header * 2), sizeof(int32_t));
-            memcpy((void*)&observeRadius, (const void*)(msgData + MESSAGE_ENTRY_SIZE__header * 3), sizeof(int32_t));
-
-            server.updateUserData(user, xPos, zPos, observeRadius);
-        }
-        */
 
         return NULL_MESSAGE;
     }

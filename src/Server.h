@@ -46,7 +46,6 @@ private:
 
     static bool s_shutdown;
 
-
 public:
     Server(const std::string configFilePath, size_t maxClientCount);
     ~Server();
@@ -59,14 +58,11 @@ public:
     // Removes connection (thread safe)
     void disconnectClient(const Client& client);
 
-    void updateUserData(const gamecommon::User& user, int32_t xPos, int32_t zPos, int32_t observeRadius);
+    void updateUserData(const Client& client, int32_t xPos, int32_t zPos, int32_t observeRadius);
     void updateUserFaction(const gamecommon::User& user, const gamecommon::Faction& faction);
 
     // Returns vector containing each connection sock. desc. (Thread safely)
     std::unordered_map<std::string, Client> getClientConnections() const;
-
-    // TODO: delete
-    // gamecommon::User getUser(const std::string& name);
 
     gamecommon::User getUser(const Client& client);
     void loginUser(const Client& client, const gamecommon::User& user);

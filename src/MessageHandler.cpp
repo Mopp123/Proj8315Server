@@ -15,134 +15,6 @@
 
 using namespace gamecommon;
 
-/*
-Message::Message(const Client& client, char* pData, size_t totalDataSize) :
-    _client(client), _totalDataSize(totalDataSize)
-{
-    if (pData && _totalDataSize >= MESSAGE_MIN_DATA_SIZE && _totalDataSize <= MESSAGE_MAX_DATA_SIZE)
-    {
-        _pData = new PK_byte[_totalDataSize];
-        memcpy(_pData, pData, _totalDataSize);
-    }
-    else if (client != NULL_CLIENT)
-    {
-        std::string dataStr(pData, totalDataSize);
-        Debug::log(
-            "Attempted to create Message instance with invalid data. raw data: " + dataStr +
-            " data size: " + std::to_string(totalDataSize) +
-            " Minimum data size is: " + std::to_string(MESSAGE_MIN_DATA_SIZE) +
-            " Maximum data size is: " + std::to_string(MESSAGE_MAX_DATA_SIZE)
-        );
-    }
-}
-
-Message::Message(const Client& client, uint32_t messageType, size_t totalDataSize) :
-    _client(client), _totalDataSize(totalDataSize)
-{
-    _totalDataSize += sizeof(uint32_t);
-    if (_totalDataSize >= MESSAGE_MIN_DATA_SIZE && _totalDataSize <= MESSAGE_MAX_DATA_SIZE)
-    {
-        _pData = new PK_byte[_totalDataSize];
-        memset(_pData, 0, totalDataSize);
-    }
-    else
-    {
-        Debug::log("Attempted to create Message instance with invalid size: " +
-            std::to_string(totalDataSize) +
-            " Minimum size: " + std::to_string(MESSAGE_MIN_DATA_SIZE) +
-            " Maximum data size: " + std::to_string(MESSAGE_MAX_DATA_SIZE)
-        );
-        return;
-    }
-
-    // NOTE: Note sure is this pointing to right place? TODO: make sure!!!!
-    add((PK_byte*)&messageType, sizeof(uint32_t));
-}
-
-Message::Message(const Message& other) :
-    _client(other._client), _totalDataSize(other._totalDataSize)
-{
-    if (other._pData && other._totalDataSize >= MESSAGE_MIN_DATA_SIZE)
-    {
-        _totalDataSize = other._totalDataSize;
-        _pData = new PK_byte[_totalDataSize];
-        memcpy(_pData, other._pData, _totalDataSize);
-    }
-}
-
-Message::~Message()
-{
-    delete[] _pData;
-}
-
-void Message::add(PK_byte* data, size_t dataSize)
-{
-    if (_pData == nullptr)
-    {
-        Debug::log("Attempted to add data to Message but underlying data buffer was nullptr");
-        return;
-    }
-    if (_currentDataPtr + dataSize > _totalDataSize)
-    {
-        Debug::log(
-            "Attempted to add data to Message but inputted data size went out of bounds of allocated space."
-            " Current byte position: " + std::to_string(_currentDataPtr) +
-            " Size to add: " + std::to_string(dataSize) +
-            " Allocated size: " + std::to_string(_totalDataSize)
-        );
-        return;
-    }
-    memcpy(_pData + _currentDataPtr, data, dataSize);
-    _currentDataPtr += dataSize;
-}
-
-void Message::incrWritePos(size_t size)
-{
-    _currentDataPtr += size;
-}
-
-int32_t Message::getType() const
-{
-    int32_t type = -1;
-    if(_pData && _totalDataSize >= MESSAGE_MIN_DATA_SIZE)
-        memcpy(&type, _pData, MESSAGE_ENTRY_SIZE__header);
-
-    return type;
-}
-*/
-
-// ---------------------------------------------------------
-/*
-void MessageQueue::push(const Message& msg)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    _messages.push(msg);
-}
-
-Message MessageQueue::pop()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    if(!_messages.empty())
-    {
-        Message front = _messages.front();
-        _messages.pop();
-        return front;
-    }
-    else
-    {
-        return NULL_MESSAGE;
-    }
-
-}
-
-bool MessageQueue::isEmpty() const
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _messages.empty();
-}
-*/
-
-// ---------------------------------------------------------
 
 MessageHandler::MessageHandler(Server& server, Game& game) :
     _serverRef(server), _gameRef(game)
@@ -156,7 +28,7 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ObjInfoLibRequest, msgs::fetch_obj_type_lib));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFactionRequest, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetAllFactions, msgs::get_all_factions));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__FactionListRequest, msgs::get_all_factions));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::server_shutdown));
 }
@@ -192,7 +64,7 @@ void MessageHandler::handleClientMessages()
                     if (sentBytes < 0)
                         Debug::log("ERROR ON SENDING!");
                     else
-                        Debug::log("Sent response message: " + std::to_string(msg.getType()));
+                        Debug::log("Sent response message to req of type: " + std::to_string(msg.getType()) + " size = " + std::to_string(response.getDataSize()));
                 }
             }
             memset(_pRecvBuf, 0, _maxRecvBufLen);
@@ -241,13 +113,13 @@ void MessageHandler::broadcastFactionStates()
 {
     while(_run)
     {
-        continue;
         // Send every changed faction's data for all clients
         Message changedFactionsMsg = _gameRef.getChangedFactions();
         // Send game world state for all clients
 
         if (changedFactionsMsg != NULL_MESSAGE)
         {
+            Debug::log("___TEST___FACTIONS UPDATED -> sending to clients...");
             //Debug::log("Changed faction msg: " + std::to_string(changedFactionsMsg.getType()));
 
             std::unordered_map<std::string, Client> currentClients = _serverRef.getClientConnections();

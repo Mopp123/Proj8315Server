@@ -38,14 +38,15 @@ Game::Game(int worldWidth) :
 
     _objUpdater = new world::objects::ObjectUpdater(*this);
 
+    // NOTE: THIS IS NOT WORKING ATM since not added proper way (this faction doesnt exist in db)
     // *Initially we always need at least one neutral faction
-    const std::string neutralFactionName = "Neutral";
-    GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
-    memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
-    Faction neutralFaction("", neutralFactionName);
-    neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
-    neutralFaction.markUpdated(false);
-    _factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
+    //const std::string neutralFactionName = "Neutral";
+    //GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
+    //memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
+    //Faction neutralFaction("", neutralFactionName);
+    //neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
+    //neutralFaction.markUpdated(false);
+    //_factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
 
     // initialize object types "library"
     // _objectInfo = world::objects::load_obj_info_file("data/objects-conf.txt"); // NOTE: <- Old way of loading this TODO: delete
@@ -54,15 +55,29 @@ Game::Game(int worldWidth) :
     _totalObjInfoSize = _objectInfo.size() * get_netw_objinfo_size();
     _objInfoInitialized = true;
 
-    // Load factions from db if server was reset
+    // Load factions from db if exists
     QueryResult factionsResult = DatabaseManager::exec_query(
         "SELECT * FROM factions;"
     );
     Debug::log("___TEST___LOADING EXISTING FACTIONS (" + std::to_string(factionsResult.result.size()) + ")");
     for (int i = 0; i <  factionsResult.result.size(); ++i)
     {
-        std::string factionName = factionsResult.getValue<std::string>(i, DATABASE_COLUMN__FACTIONS__NAME);
-        Debug::log("    " + factionName);
+        std::string id = factionsResult.getValue<std::string>(i, DATABASE_COLUMN__FACTIONS__ID);
+        std::string name = factionsResult.getValue<std::string>(i, DATABASE_COLUMN__FACTIONS__NAME);
+        Faction faction(id, name);
+        _factions.insert(std::make_pair(name, faction));
+        Debug::log("    Added exiting faction: " + name + "(" + id + ")");
+    }
+
+
+    Faction neutralFaction = _factions["Neutral"];
+    // TODO: Asserts...
+    if (neutralFaction == NULL_FACTION)
+    {
+        Debug::log(
+            "Starting server requires 'Neutral' faction to exist",
+            Debug::MessageType::FATAL_ERROR
+        );
     }
 
     // Testing movement with these objs
@@ -193,17 +208,6 @@ Message Game::addFaction(Server& server, const Client& client, const std::string
             User user = server.getUser(client);
             if (user != NULL_USER)
             {
-                // uint32_t newFactionID = _factions.size() + 1;
-                // Debug::log(
-                //     std::to_string(newFactionID) +
-                //     ", " +
-                //     user.getID() +
-                //     ", '" +
-                //     factionName + "'); Faction name size: " +
-                //     std::to_string(factionName.size()) +
-                //     " Faction name length: " + std::to_string(factionName.length())
-                // );
-
                 QueryResult insertFactionResult = DatabaseManager::exec_query(
                     "INSERT INTO factions(user_id, name) VALUES('" + user.getID() + "', '" + factionName + "') RETURNING id;"
                 );
@@ -276,41 +280,30 @@ Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
 // TODO: Create message of type "GetAllFactions" which takes just takes all factions as parameter
 Message Game::getAllFactions() const
 {
-    /*
-    //Message response(NULL_CLIENT, MESSAGE_TYPE__GetAllFactions, _factions.size() * Faction::get_netw_size());
-    int32_t msgType = MESSAGE_TYPE__GetAllFactions;
-    size_t bufSize = sizeof(int32_t) + _factions.size() * Faction::get_netw_size();
-    GC_byte buf[bufSize];
-    memset(buf, 0, bufSize);
-    memcpy(buf, &msgType, sizeof(int32_t));
-    int writePos = sizeof(int32_t);
-
-    std::lock_guard<std::mutex> lock(_mutex_worldState);
-    for (const std::pair<std::string, Faction> faction : _factions)
-    {
-        size_t factionSize = Faction::get_netw_size();
-        memcpy(buf + writePos, faction.second.getNetwData(), factionSize);
-        writePos += factionSize;
-
-        //Faction* factionObj = faction.second;
-        //response.add((PK_byte*)factionObj->getNetwData(), Faction::get_netw_size());
-    }
-    // NOTE: just a hack atm
-    return Message(buf, bufSize, bufSize);
-    */
-
     std::vector<Faction> factionsList;
     factionsList.reserve(_factions.size());
     std::lock_guard<std::mutex> lock(_mutex_worldState);
     for (const auto& faction : _factions)
         factionsList.emplace_back(faction.second);
 
-    return FactionsMsg(factionsList);
+    return FactionListResponse(factionsList);
 }
 
 // TODO: Create message of type "GetChangedFactions" which takes just takes changed factions as parameter
 Message Game::getChangedFactions() const
 {
+    std::lock_guard<std::mutex> lock(_mutex_worldState);
+    std::vector<Faction> changedFactions;
+    for (auto& faction : _factions)
+    {
+        if (faction.second.isUpdated())
+            changedFactions.push_back(faction.second);
+    }
+    if (changedFactions.empty())
+        return NULL_MESSAGE;
+
+    return UpdatedFactionsMsg(changedFactions);
+    // OLD BELOW!!!
     /*
     std::lock_guard<std::mutex> lock(_mutex_worldState);
     std::vector<Faction> changedFactions;
@@ -339,7 +332,6 @@ Message Game::getChangedFactions() const
     // NOTE: just a hack atm
     return Message(buf, bufSize, bufSize);
     */
-    return NULL_MESSAGE;
 }
 
 const std::vector<ObjectInfo>& Game::getObjInfoLib()

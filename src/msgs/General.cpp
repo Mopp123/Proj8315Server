@@ -179,6 +179,36 @@ namespace msgs
     }
 
 
+    // Atm just a quick way to logout
+    // TODO: Make more secure!
+    Message user_logout(Server& server, const Client& client, Message& msg)
+    {
+        if (msg != NULL_MESSAGE)
+        {
+            User clientUser = server.getUser(client);
+            if (clientUser != NULL_USER)
+            {
+                if (server.logoutUser(client, clientUser))
+                    return Message(MESSAGE_TYPE__LogoutResponse, MESSAGE_ENTRY_SIZE__header);
+                else
+                    Debug::log(
+                        "@user_logout "
+                        "Failed to logout user due to server error",
+                        Debug::MessageType::ERROR
+                    );
+            }
+            else
+            {
+                Debug::log(
+                    "@user_logout: "
+                    "No user found for client: " + client.getAddress()
+                );
+            }
+        }
+        return NULL_MESSAGE;
+    }
+
+
     Message user_register(Server& server, const Client& client, Message& msg)
     {
         UserRegisterRequest registerReqMsg(msg.getData(), msg.getDataSize());

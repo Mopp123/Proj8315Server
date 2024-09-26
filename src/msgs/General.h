@@ -13,6 +13,7 @@ namespace msgs
 {
     gamecommon::Message get_server_message(Server& server, const Client& client, gamecommon::Message& msg);
     gamecommon::Message user_login(Server& server, const Client& client, gamecommon::Message& msg);
+    gamecommon::Message user_logout(Server& server, const Client& client, gamecommon::Message& msg);
     gamecommon::Message user_register(Server& server, const Client& client, gamecommon::Message& msg);
     gamecommon::Message fetch_obj_type_lib(Server& server, const Client& client, gamecommon::Message& msg);
 

@@ -66,6 +66,7 @@ public:
 
     gamecommon::User getUser(const Client& client);
     void loginUser(const Client& client, const gamecommon::User& user);
+    bool logoutUser(const Client& client, const gamecommon::User& user);
 
     // TODO: delete
     // bool createUser(

@@ -232,12 +232,67 @@ User Server::getUser(const Client& client)
     return NULL_USER;
 }
 
+// TODO: Make this actually login the user, like logoutUser below..
 void Server::loginUser(const Client& client, const gamecommon::User& user)
 {
     Debug::log("___TEST___attempting login user: " + user.getName() + " : " + user.getID());
     std::lock_guard<std::mutex> lock(_mutex);
     _clientUserMapping[client.getAddress()] = user;
 }
+
+bool Server::logoutUser(const Client& client, const gamecommon::User& user)
+{
+    Debug::log("Attempting logout user: " + user.getName() + " : " + user.getID());
+    std::lock_guard<std::mutex> lock(_mutex);
+    const std::string& clientAddr = client.getAddress();
+    std::unordered_map<std::string, Client>::const_iterator it = _clients.find(clientAddr);
+    if (it != _clients.end())
+    {
+        std::unordered_map<std::string, User>::const_iterator itUserMapping = _clientUserMapping.find(clientAddr);
+        if (itUserMapping != _clientUserMapping.end())
+        {
+            QueryResult setLoggedOutResult = DatabaseManager::exec_query(
+                "UPDATE users SET logged_in=FALSE WHERE id='" + user.getID() + "';"
+            );
+            if (setLoggedOutResult.status == QUERY_STATUS__SUCCESS)
+            {
+                Debug::log("User: " + user.getName() + " logged out successfully");
+                _clientUserMapping.erase(itUserMapping);
+                return true;
+            }
+            else
+            {
+                // NOTE: Don't remember is errorMsg working atm...
+                Debug::log(
+                    "@Server::logoutUser "
+                    "Failed to logout user: " + user.getName() + " "
+                    "due to database error: " + setLoggedOutResult.errorMsg,
+                    Debug::MessageType::ERROR
+                );
+            }
+        }
+        else
+        {
+            Debug::log(
+                "@Server::logoutUser "
+                "Failed to find client's(" + clientAddr + ") "
+                "user from clientUserMapping",
+                Debug::MessageType::ERROR
+            );
+        }
+    }
+    else
+    {
+        Debug::log(
+            "@Server::logoutUser "
+            "Failed to logout user: " + user.getName() +
+            ". Client wasn't found from connected clients",
+            Debug::MessageType::ERROR
+        );
+    }
+    return false;
+}
+
 
 //TODO: delete
 // bool Server::createUser(

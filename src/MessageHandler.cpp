@@ -23,8 +23,9 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     memset(_pRecvBuf, 0, _maxRecvBufLen);
 
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerMessage, msgs::get_server_message));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserLogin, msgs::user_login));
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegister, msgs::user_register));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__LoginRequest, msgs::user_login));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__LogoutRequest, msgs::user_logout));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegisterRequest, msgs::user_register));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ObjInfoLibRequest, msgs::fetch_obj_type_lib));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFactionRequest, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));

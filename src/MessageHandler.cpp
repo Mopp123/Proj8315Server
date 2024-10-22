@@ -78,7 +78,8 @@ void MessageHandler::broadcastWorldState()
     while(_run)
     {
         // NOTE: HARDCODED ONLY FOR TESTING ATM!!!
-        std::this_thread::sleep_for(std::chrono::milliseconds(600));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(600));
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
         // Send game world state for all clients
         std::unordered_map<std::string, Client> currentClients = _serverRef.getClientConnections();

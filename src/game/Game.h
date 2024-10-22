@@ -62,7 +62,7 @@ public:
 
     gamecommon::Message addFaction(Server& server, const Client& client, const std::string factionName);
     // Returns current "dynamic" world state
-    gamecommon::Message getWorldState(int xPos, int zPos, int observeRadius) const;
+    gamecommon::Message getWorldState(int32_t xPos, int32_t zPos, int observeRadius) const;
     // Returns all factions' data
     gamecommon::Message getAllFactions() const;
     gamecommon::Message getChangedFactions() const;

@@ -43,6 +43,8 @@ namespace world
 
         int octaveCount = 6;
         float scaleDivisor = 0.4f;
+        //int octaveCount = 5;
+        //float scaleDivisor = 0.0125f;
 
         float minHeight = 0.0f;
         std::vector<float> heightmap = generate_perlin2D(seedArr, worldWidth, octaveCount, scaleDivisor, &minHeight);
@@ -58,14 +60,8 @@ namespace world
                 float fHeight = heightmap[index];
 
                 GC_ubyte h = (GC_ubyte)(fHeight * (float)maxElevationVal);
-                //PK_ubyte h2 = (PK_ubyte)(minHeight * (float)maxElevationVal);
-                GC_ubyte finalHeight = 0;
-                if(fHeight - minHeight >= 0.0f)
-                    finalHeight = h - minHeight;
-                else
-                    finalHeight = h;
 
-                set_tile_terrelevation(pWorld[index], finalHeight);
+                set_tile_terrelevation(pWorld[index], h);
             }
         }
     }
@@ -73,7 +69,8 @@ namespace world
 
     static void generate_world_erosion(uint64_t* pWorld, int worldWidth)
     {
-        const int cliffValThreshold = 8;
+        //const int cliffValThreshold = 8;
+        const int cliffValThreshold = 12;
         for(int y = 0; y < worldWidth; ++y)
         {
             for(int x = 0; x < worldWidth; ++x)
@@ -109,8 +106,8 @@ namespace world
 
     static void generate_world_waters(uint64_t* pWorld, int worldWidth)
     {
-        const GC_ubyte elev_threshold_water = 2;
-        const GC_ubyte elev_cap_fertile = 5;
+        const GC_ubyte elev_threshold_water = 5;
+        const GC_ubyte elev_cap_fertile = 16;
         const int fertilityFrequency = 8;
         // "calc erosion / water pools"
         std::unordered_set<int> tilesToSkip;
@@ -200,8 +197,8 @@ namespace world
                 int tileElevation = (int)get_tile_terrelevation(pWorld[index]);
                 int distFromEq = std::abs(y - equatorYPos);
 
-                int elevationMod = tileElevation * 2;
-                int eqDistMod = distFromEq / 10;
+                int elevationMod = tileElevation;
+                int eqDistMod = (distFromEq / 20);
                 int temperatureScore = baseTemperature - elevationMod - eqDistMod;
                 if(temperatureScore <= 0)
                     set_tile_terrtype(pWorld[index], 2);

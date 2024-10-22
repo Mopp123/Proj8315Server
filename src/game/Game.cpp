@@ -33,7 +33,9 @@ Game::Game(int worldWidth) :
     memset((void*)_pWorld, 0, sizeof(uint64_t) * _worldWidth * _worldWidth);
 
     unsigned int worldGenSeed = 4718;
-    int maxElevationVal = 15; // max val of 3 bit uint
+    // This should be max val of terrain elevation(atm max val of 5 bit uint)
+    // NOTE: atm thinking of reverting to use just 4 bits (max val = 15)
+    int maxElevationVal = 31;
     world::generate_world(_pWorld, _worldWidth, maxElevationVal, worldGenSeed, 128, 20);
 
     _objUpdater = new world::objects::ObjectUpdater(*this);
@@ -243,16 +245,20 @@ Message Game::addFaction(Server& server, const Client& client, const std::string
     return CreateFactionResponse(success, errorMessage, faction);
 }
 
-Message Game::getWorldState(int xPos, int zPos, int observeRadius) const
+Message Game::getWorldState(int32_t xPos, int32_t zPos, int observeRadius) const
 {
-    const int observeRectWidth = (observeRadius * 2) + 1;
-    size_t bufSize = sizeof(int32_t) + (observeRectWidth * observeRectWidth) * sizeof(uint64_t);
+    size_t bufSize = MESSAGE_REQUIRED_SIZE__WorldStateMsg;
 
     int32_t msgType = MESSAGE_TYPE__WorldState;
     GC_byte* pBuf = new GC_byte[bufSize];
     memset(pBuf, 0, bufSize);
+    // add msg typ
     memcpy(pBuf, &msgType, sizeof(int32_t));
     int writePos = sizeof(int32_t);
+    // add requested tile coords
+    memcpy(pBuf + writePos, &xPos, sizeof(int32_t));
+    memcpy(pBuf + (writePos + sizeof(int32_t)), &zPos, sizeof(int32_t));
+    writePos += sizeof(int32_t) * 2;
 
     for(int z = zPos - observeRadius; z <= zPos + observeRadius; ++z)
     {

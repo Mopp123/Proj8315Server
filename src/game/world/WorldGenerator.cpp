@@ -314,10 +314,27 @@ namespace world
                         if(adjIndex >= 0 && adjIndex < worldWidth * worldWidth)
                         {
                             int adjElevation = (int)get_tile_terrelevation(pWorld[adjIndex]);
-                            if (adjElevation > currentElevation)
+                            if (adjElevation - currentElevation >= cliffThreshold)
                             {
                                 set_tile_terrtype(pWorld[currentIndex], 3);
                                 set_tile_terrtype(pWorld[adjIndex], 3);
+
+                                int diceThrow1 = std::rand() % 20;
+                                int diceThrow2 = std::rand() % 5;
+                                if (diceThrow1 == 1)
+                                {
+                                    create_ramp(
+                                        pWorld,
+                                        worldWidth,
+                                        x2,
+                                        y2,
+                                        diceThrow2 + 1
+                                    );
+                                    // atm just testing here to display some other
+                                    // than cliff on ramp
+                                    set_tile_terrtype(pWorld[currentIndex], 4);
+                                    set_tile_terrtype(pWorld[adjIndex], 4);
+                                }
                             }
                         }
                     }
@@ -419,7 +436,8 @@ namespace world
 
 
     // Returns indices to tiles that are continuously at same level with tile at x, y
-    static std::set<int> get_level_tiles(uint64_t* pWorld, int worldWidth, int x, int y)
+    // (leaks into lower tiles if found)
+    static std::set<int> generate_water_area(uint64_t* pWorld, int worldWidth, int x, int y, int& waterLevel)
     {
         // Iterate through adjacent tiles that are at same elevation by depth first search
         // TODO: optimize..
@@ -460,10 +478,21 @@ namespace world
                 {
                     GC_ubyte adjacentHeight = get_tile_terrelevation(*(pWorld + adjacentIndex));
                     if (adjacentHeight == currentHeight)
+                    {
                         searchStack.push_back(adjacentNodes[i]);
+                    }
+                    // If tile was lower -> leak into it
                     else if (adjacentHeight < currentHeight)
-                        return get_level_tiles(pWorld, worldWidth, adjacentNodes[i].x, adjacentNodes[i].y);
-                        //leakInto[adjacentIndex] = adjacentNodes[i];
+                    {
+                        return generate_water_area(pWorld, worldWidth, adjacentNodes[i].x, adjacentNodes[i].y, waterLevel);
+                    }
+                    else if (adjacentHeight > currentHeight)
+                    {
+                        if (waterLevel != -1)
+                            waterLevel = std::min(waterLevel, (int)adjacentHeight);
+                        else
+                            waterLevel = adjacentHeight;
+                    }
                 }
             }
 
@@ -478,21 +507,25 @@ namespace world
         int testStartX = 16;
         int testStartY = 61;
 
-        std::set<int> finalWaters;
+        // pair's first = tile index, second = height the water should be at
+        std::set<std::pair<int, GC_ubyte>> finalWaters;
         const int iterCount = 1024;
         for (int i = 0; i < iterCount; ++i)
         {
             int rx = std::rand() % worldWidth;
             int ry = std::rand() % worldWidth;
-
-            std::set<int> waterTiles = get_level_tiles(
+            int waterLevel = -1;
+            std::set<int> waterTiles = generate_water_area(
                 pWorld,
                 worldWidth,
                 rx,
-                ry
+                ry,
+                waterLevel
             );
-            for (int w : waterTiles)
-                finalWaters.insert(w);
+            if (waterLevel == -1) // This shouldn't happen tho..?
+                waterLevel = 0;
+            for (int tileIndex : waterTiles)
+                finalWaters.insert(std::make_pair(tileIndex, (GC_ubyte)waterLevel));
         }
 
         /*
@@ -545,9 +578,13 @@ namespace world
 
         Debug::log("___TEST___final water count = " + std::to_string(finalWaters.size()));
 
-        for (const int i : finalWaters)
+        for (const std::pair<int, GC_ubyte>& p : finalWaters)
         {
-            set_tile_terrtype(*(pWorld + i), 1);
+            GC_ubyte h = p.second;
+            if (h > 0)
+                h -= 1;
+            set_tile_terrtype(*(pWorld + p.first), 1);
+            set_tile_terrelevation(*(pWorld + p.first), h);
         }
     }
 
@@ -575,8 +612,8 @@ namespace world
     {
         //generate_world_elevation(pWorld, worldWidth, maxElevationVal, seed);
         generate_world_elevation_TEST(pWorld, worldWidth, maxElevationVal, seed);
-        generate_world_erosion(pWorld, worldWidth, 4);
         generate_world_waters_TEST(pWorld, worldWidth);
+        generate_world_erosion(pWorld, worldWidth, 4);
         //generate_world_waters(pWorld, worldWidth);
         //generate_temperature_effect(pWorld, worldWidth, equatorYPos, baseTemperature);
     }

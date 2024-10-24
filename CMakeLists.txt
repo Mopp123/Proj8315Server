@@ -4,7 +4,7 @@ set (proj_name "MMOGameServer")
 
 project(${proj_name})
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=c++17")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17")
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories ("${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/Proj8315Common/src" "/usr/local/include" "/usr/include/postgresql/")

@@ -91,6 +91,8 @@ Game::Game(int worldWidth) :
     	    _testUnits.push_back(_objUpdater->accessObject(_objUpdater->accessObjects().size() - 1));
     }
 
+    // Testing spawn some trees
+    /*
     for (int y = 0; y < _worldWidth; ++y)
     {
         for (int x = 0; x < _worldWidth; ++x)
@@ -106,6 +108,7 @@ Game::Game(int worldWidth) :
             }
         }
     }
+    */
 }
 
 Game::~Game()

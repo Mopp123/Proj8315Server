@@ -197,44 +197,8 @@ namespace world
                     const GC_ubyte h = (GC_ubyte)finalHeight;
                     uint64_t& targetTile = *(pWorld + (tileX + tileY * worldWidth));
                     set_tile_terrelevation(targetTile, h);
-                    set_tile_terrtype(targetTile, 4);
+                    set_tile_terrtype(targetTile, TileStateTerrType::TILE_STATE_terrTypeFertile);
                 }
-            }
-        }
-    }
-
-
-    static void generate_world_elevation(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed)
-    {
-        srand(seed);
-
-        size_t seedArrLength = worldWidth * worldWidth;
-        float* seedArr = new float[seedArrLength];
-        memset(seedArr, 0, sizeof(float) * seedArrLength);
-        for(size_t i = 0; i < seedArrLength; ++i)
-            seedArr[i] = (float)(std::rand() % maxElevationVal) / maxElevationVal;
-
-        int octaveCount = 6;
-        float scaleDivisor = 0.4f;
-        //int octaveCount = 5;
-        //float scaleDivisor = 0.0125f;
-
-        float minHeight = 0.0f;
-        std::vector<float> heightmap = generate_perlin2D(seedArr, worldWidth, octaveCount, scaleDivisor, &minHeight);
-        Debug::log("min height was: " + std::to_string(minHeight));
-        delete[] seedArr;
-
-        // Copy the elevation from heightmap to our pWorld
-        for(int y = 0; y < worldWidth; ++y)
-        {
-            for(int x = 0; x < worldWidth; ++x)
-            {
-                size_t index = x + y * worldWidth;
-                float fHeight = heightmap[index];
-
-                GC_ubyte h = (GC_ubyte)(fHeight * (float)maxElevationVal);
-
-                set_tile_terrelevation(pWorld[index], h);
             }
         }
     }
@@ -264,7 +228,7 @@ namespace world
     }
 
 
-    static void generate_world_elevation_TEST(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed)
+    static void generate_world_elevation(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed)
     {
         // first one is more "broad/general" shape of the world
         std::vector<float> heightmap1 = create_heightmap(worldWidth, seed, 5, 0.4f, maxElevationVal);
@@ -291,13 +255,14 @@ namespace world
                 //GC_ubyte h = (GC_ubyte)(fHeight * (float)maxElevationVal);
 
                 set_tile_terrelevation(pWorld[index], h);
-                set_tile_terrtype(pWorld[index], 4);
+                set_tile_terrtype(pWorld[index], TileStateTerrType::TILE_STATE_terrTypeFertile);
             }
         }
     }
 
-    // Should we also generate ramps here?
-    static void generate_world_erosion(uint64_t* pWorld, int worldWidth, int cliffThreshold)
+
+    // Generates cliffs and ramps
+    static void generate_world_cliffs(uint64_t* pWorld, int worldWidth, int cliffThreshold)
     {
         for(int y = 0; y < worldWidth; ++y)
         {
@@ -316,8 +281,8 @@ namespace world
                             int adjElevation = (int)get_tile_terrelevation(pWorld[adjIndex]);
                             if (adjElevation - currentElevation >= cliffThreshold)
                             {
-                                set_tile_terrtype(pWorld[currentIndex], 3);
-                                set_tile_terrtype(pWorld[adjIndex], 3);
+                                set_tile_terrtype(pWorld[currentIndex], TileStateTerrType::TILE_STATE_terrTypeRock);
+                                set_tile_terrtype(pWorld[adjIndex], TileStateTerrType::TILE_STATE_terrTypeRock);
 
                                 int diceThrow1 = std::rand() % 20;
                                 int diceThrow2 = std::rand() % 5;
@@ -332,8 +297,8 @@ namespace world
                                     );
                                     // atm just testing here to display some other
                                     // than cliff on ramp
-                                    set_tile_terrtype(pWorld[currentIndex], 4);
-                                    set_tile_terrtype(pWorld[adjIndex], 4);
+                                    set_tile_terrtype(pWorld[currentIndex], TileStateTerrType::TILE_STATE_terrTypeFertile);
+                                    set_tile_terrtype(pWorld[adjIndex], TileStateTerrType::TILE_STATE_terrTypeFertile);
                                 }
                             }
                         }
@@ -344,89 +309,7 @@ namespace world
     }
 
 
-    static void generate_world_waters(uint64_t* pWorld, int worldWidth)
-    {
-        const GC_ubyte elev_threshold_water = 5;
-        const GC_ubyte elev_cap_fertile = 16;
-        const int fertilityFrequency = 8;
-        // "calc erosion / water pools"
-        std::unordered_set<int> tilesToSkip;
-        for(int y = 0; y < worldWidth; ++y)
-        {
-            for(int x = 0; x < worldWidth; ++x)
-            {
-                int index = x + y * worldWidth;
-                GC_ubyte tileElevation = get_tile_terrelevation(pWorld[index]);
-                if(tileElevation > elev_threshold_water && tileElevation < elev_cap_fertile)
-                {
-                    int diceThrow = std::rand() % (tileElevation * tileElevation * tileElevation) / fertilityFrequency;
-                    if(diceThrow <= elev_cap_fertile)
-                        set_tile_terrtype(pWorld[index], 4);
-                    continue;
-                }
-
-                if(tilesToSkip.find(index) != tilesToSkip.end())
-                    continue;
-                if(tileElevation <= elev_threshold_water)
-                {
-                    set_tile_terrelevation(pWorld[index], elev_threshold_water);
-                    for(int y2 = y - 1; y2 <= y + 1; ++y2)
-                    {
-                        for(int x2 = x - 1; x2 <= x + 1; ++x2)
-                        {
-                            int adjacentIndex = x2 + y2 * worldWidth;
-                            if(adjacentIndex >= 0 && adjacentIndex < worldWidth * worldWidth)
-                            {
-                                GC_ubyte t = get_tile_terrelevation(pWorld[adjacentIndex]);
-                                if(t != tileElevation)
-                                {
-                                    set_tile_terrelevation(pWorld[adjacentIndex], elev_threshold_water);
-                                    tilesToSkip.insert(adjacentIndex);
-                                }
-                            }
-                        }
-                    }
-                }
-
-            }
-        }
-        // then place the actual water tiles in the "pools"
-        for(int y = 0; y < worldWidth; ++y)
-        {
-            for(int x = 0; x < worldWidth; ++x)
-            {
-                int index = x + y * worldWidth;
-                GC_ubyte tileElevation = get_tile_terrelevation(pWorld[index]);
-                if(tileElevation <= elev_threshold_water)
-                {
-                    bool isFlat = true;
-                    for(int y2 = y - 1; y2 <= y + 1; ++y2)
-                    {
-                        for(int x2 = x - 1; x2 <= x + 1; ++x2)
-                        {
-                            int adjacentIndex = x2 + y2 * worldWidth;
-                            if(adjacentIndex >= 0 && adjacentIndex < worldWidth * worldWidth)
-                            {
-                                GC_ubyte t = get_tile_terrelevation(pWorld[adjacentIndex]);
-                                if(t != tileElevation)
-                                {
-                                    isFlat = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if(!isFlat)
-                            break;
-                    }
-                    if(isFlat)
-                        set_tile_terrtype(pWorld[index], 1);
-                }
-
-            }
-        }
-    }
-
-
+    // Used when generating "water areas/pools of water" using DFS in below func
     struct SearchNode
     {
         int x = 0;
@@ -502,15 +385,12 @@ namespace world
     }
 
 
-    static void generate_world_waters_TEST(uint64_t* pWorld, int worldWidth)
+    // *Pool count means how many "pools of water" we create
+    static void generate_world_waters(uint64_t* pWorld, int worldWidth, int poolCount)
     {
-        int testStartX = 16;
-        int testStartY = 61;
-
         // pair's first = tile index, second = height the water should be at
         std::set<std::pair<int, GC_ubyte>> finalWaters;
-        const int iterCount = 1024;
-        for (int i = 0; i < iterCount; ++i)
+        for (int i = 0; i < poolCount; ++i)
         {
             int rx = std::rand() % worldWidth;
             int ry = std::rand() % worldWidth;
@@ -527,70 +407,43 @@ namespace world
             for (int tileIndex : waterTiles)
                 finalWaters.insert(std::make_pair(tileIndex, (GC_ubyte)waterLevel));
         }
-
-        /*
-        int iterCount = 0;
-        std::set<int> finalWaters;
-        if (leaks.empty())
-        {
-            finalWaters = waterTiles;
-        }
-        else
-        {
-            while (!leaks.empty())
-            {
-                std::unordered_map<int, SearchNode>::const_iterator it;
-                std::set<int> leaksToErase;
-                std::unordered_map<int, SearchNode> leaksToAdd;
-                for (it = leaks.begin(); it != leaks.end(); ++it)
-                {
-                    const SearchNode& n = it->second;
-                    std::unordered_map<int, SearchNode> newLeaks;
-                    std::set<int> newWaterTiles = get_level_tiles(
-                        pWorld,
-                        worldWidth,
-                        n.x,
-                        n.y,
-                        newLeaks
-                    );
-                    if (newLeaks.empty())
-                    {
-                        leaksToErase.insert(it->first);
-                        for (int t : newWaterTiles)
-                            finalWaters.insert(t);
-                    }
-                    else
-                    {
-                        for (std::unordered_map<int, SearchNode>::const_iterator nit = newLeaks.begin(); nit != newLeaks.end(); ++nit)
-                            leaksToAdd[nit->first] = nit->second;
-                    }
-                    Debug::log("Iter: " + std::to_string(iterCount) + " leak count: " + std::to_string(leaks.size()) + " leaks to erase: " + std::to_string(leaksToErase.size()) + " final waters: " + std::to_string(finalWaters.size()));
-                    ++iterCount;
-                }
-                Debug::log("___TEST___READY iterations: " + std::to_string(iterCount));
-                for (int l : leaksToErase)
-                    leaks.erase(l);
-                for (std::pair<int, SearchNode> n : leaksToAdd)
-                    leaks[n.first] = n.second;
-            }
-        }
-        */
-
-        Debug::log("___TEST___final water count = " + std::to_string(finalWaters.size()));
-
         for (const std::pair<int, GC_ubyte>& p : finalWaters)
         {
             GC_ubyte h = p.second;
             if (h > 0)
                 h -= 1;
-            set_tile_terrtype(*(pWorld + p.first), 1);
+            set_tile_terrtype(*(pWorld + p.first), TileStateTerrType::TILE_STATE_terrTypeWater);
             set_tile_terrelevation(*(pWorld + p.first), h);
         }
     }
 
 
-    static void generate_temperature_effect(uint64_t* pWorld, int worldWidth, int equatorYPos, int baseTemperature)
+    static void generate_temperature_effect(
+        uint64_t* pWorld,
+        int worldWidth,
+        int equatorYPos,
+        int baseTemperature
+    )
     {
+        for(int y = 0; y < worldWidth; ++y)
+        {
+            for(int x = 0; x < worldWidth; ++x)
+            {
+                size_t index = x + y * worldWidth;
+                // TODO: take elevation into account
+                int tileElevation = (int)get_tile_terrelevation(pWorld[index]);
+                int distFromEq = std::abs(y - equatorYPos);
+
+                // atm just set temp to freezing at certain distance from eq
+                uint64_t& tileRef = *(pWorld + index);
+                set_tile_temperature(tileRef, TileStateTemperature::TILE_STATE_freezing);
+                // if was previously fertile -> make dead
+                GC_ubyte currentType = get_tile_terrtype(tileRef);
+                if (currentType == TileStateTerrType::TILE_STATE_terrTypeFertile)
+                    set_tile_terrtype(tileRef, TileStateTerrType::TILE_STATE_terrTypeBarren);
+            }
+        }
+        /*
         for(int y = 0; y < worldWidth; ++y)
         {
             for(int x = 0; x < worldWidth; ++x)
@@ -606,15 +459,14 @@ namespace world
                     set_tile_terrtype(pWorld[index], 2);
             }
         }
+        */
     }
 
     void generate_world(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed, int equatorYPos, int baseTemperature)
     {
-        //generate_world_elevation(pWorld, worldWidth, maxElevationVal, seed);
-        generate_world_elevation_TEST(pWorld, worldWidth, maxElevationVal, seed);
-        generate_world_waters_TEST(pWorld, worldWidth);
-        generate_world_erosion(pWorld, worldWidth, 4);
-        //generate_world_waters(pWorld, worldWidth);
-        //generate_temperature_effect(pWorld, worldWidth, equatorYPos, baseTemperature);
+        generate_world_elevation(pWorld, worldWidth, maxElevationVal, seed);
+        generate_world_waters(pWorld, worldWidth, 1024);
+        generate_world_cliffs(pWorld, worldWidth, 4);
+        generate_temperature_effect(pWorld, worldWidth, equatorYPos, baseTemperature);
     }
 }

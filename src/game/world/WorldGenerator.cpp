@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <map>
 #include <vector>
 #include <set>
 #include "../../Debug.h"
@@ -388,6 +389,7 @@ namespace world
     // *Pool count means how many "pools of water" we create
     static void generate_world_waters(uint64_t* pWorld, int worldWidth, int poolCount)
     {
+        std::srand(666);
         // pair's first = tile index, second = height the water should be at
         std::set<std::pair<int, GC_ubyte>> finalWaters;
         for (int i = 0; i < poolCount; ++i)
@@ -425,47 +427,72 @@ namespace world
         int baseTemperature
     )
     {
+
+        std::unordered_map<int, TileStateTemperature> tempMapping =
+        {
+            { 0, TileStateTemperature::TILE_STATE_freezing },
+            { 1, TileStateTemperature::TILE_STATE_cold },
+            { 2, TileStateTemperature::TILE_STATE_chilly },
+            { 3, TileStateTemperature::TILE_STATE_mild },
+            { 4, TileStateTemperature::TILE_STATE_warm },
+            { 5, TileStateTemperature::TILE_STATE_hot },
+            { 6, TileStateTemperature::TILE_STATE_burning }
+        };
+
+        std::map<TileStateTemperature, int> tempCounts;
+
         for(int y = 0; y < worldWidth; ++y)
         {
             for(int x = 0; x < worldWidth; ++x)
             {
                 size_t index = x + y * worldWidth;
-                // TODO: take elevation into account
-                int tileElevation = (int)get_tile_terrelevation(pWorld[index]);
-                int distFromEq = std::abs(y - equatorYPos);
+                float fTileElevation = (int)get_tile_terrelevation(pWorld[index]);
+                float distFromEq = (float)std::abs(y - equatorYPos);
 
-                // atm just set temp to freezing at certain distance from eq
+                float distScore = std::min((distFromEq / (49.0f)), 6.0f);
+                float elevationScore = std::max((fTileElevation / 6.0f), 0.0f);
+
+                const int testBaseTemperature = 6;
+                int totalTemperatureScore = std::max(testBaseTemperature - (int)((distScore + elevationScore) * 0.5f), 0);
+
+                TileStateTemperature useTemperature = tempMapping[totalTemperatureScore];
+                tempCounts[useTemperature] += 1;
+
                 uint64_t& tileRef = *(pWorld + index);
-                set_tile_temperature(tileRef, TileStateTemperature::TILE_STATE_freezing);
-                // if was previously fertile -> make dead
-                GC_ubyte currentType = get_tile_terrtype(tileRef);
-                if (currentType == TileStateTerrType::TILE_STATE_terrTypeFertile)
-                    set_tile_terrtype(tileRef, TileStateTerrType::TILE_STATE_terrTypeBarren);
-            }
-        }
-        /*
-        for(int y = 0; y < worldWidth; ++y)
-        {
-            for(int x = 0; x < worldWidth; ++x)
-            {
-                size_t index = x + y * worldWidth;
-                int tileElevation = (int)get_tile_terrelevation(pWorld[index]);
-                int distFromEq = std::abs(y - equatorYPos);
+                set_tile_temperature(tileRef, useTemperature);
 
-                int elevationMod = tileElevation;
-                int eqDistMod = (distFromEq / 20);
-                int temperatureScore = baseTemperature - elevationMod - eqDistMod;
-                if(temperatureScore <= 0)
-                    set_tile_terrtype(pWorld[index], 2);
+                // NOTE: TESTING BELOW...
+                // Alter tile terrain type depending on temperature
+                GC_ubyte currentType = get_tile_terrtype(tileRef);
+                // set non fertile if burning hot and no water around
+                int nearWaterCount = 0;
+                const int checkRadius = 3;
+                if (useTemperature == TileStateTemperature::TILE_STATE_burning && currentType != TileStateTerrType::TILE_STATE_terrTypeRock)
+                {
+                    for (int y2 = y - checkRadius; y2 < y + checkRadius; ++y2)
+                    {
+                        for (int x2 = x - checkRadius; x2 < x + checkRadius; ++x2)
+                        {
+                            const int adjacentIndex = x2 + y2 * worldWidth;
+                            if (adjacentIndex >= 0 && adjacentIndex < worldWidth * worldWidth)
+                            {
+                                uint64_t& adjacentTileRef = *(pWorld + adjacentIndex);
+                                if (get_tile_terrtype(adjacentTileRef) == TileStateTerrType::TILE_STATE_terrTypeWater)
+                                    ++nearWaterCount;
+                            }
+                        }
+                    }
+                    if (nearWaterCount < 3)
+                        set_tile_terrtype(tileRef, TileStateTerrType::TILE_STATE_terrTypeDunes);
+                }
             }
         }
-        */
     }
 
     void generate_world(uint64_t* pWorld, int worldWidth, int maxElevationVal, unsigned int seed, int equatorYPos, int baseTemperature)
     {
         generate_world_elevation(pWorld, worldWidth, maxElevationVal, seed);
-        generate_world_waters(pWorld, worldWidth, 1024);
+        generate_world_waters(pWorld, worldWidth, 2048);
         generate_world_cliffs(pWorld, worldWidth, 4);
         generate_temperature_effect(pWorld, worldWidth, equatorYPos, baseTemperature);
     }

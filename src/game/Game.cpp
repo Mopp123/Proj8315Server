@@ -6,7 +6,7 @@
 #include "MessageHandler.h"
 
 #include "objects/Object.h"
-#include "objects/ObjectUpdater.h"
+#include "objects/ObjectManager.h"
 #include "world/WorldGenerator.h"
 #include "DatabaseManager.h"
 #include "../Debug.h"
@@ -28,7 +28,17 @@ Game::Game(int worldWidth) :
 {
     s_pInstance = this;
 
-    // Init world state
+    // initialize object types "library"
+    _objectInfo = world::objects::load_obj_info_db();
+    // determine total size of the objLib in bytes
+    _totalObjInfoSize = _objectInfo.size() * get_netw_objinfo_size();
+    _objInfoInitialized = true;
+
+
+    _pObjManager = new world::objects::ObjectManager(*this);
+
+
+    // Generate world tiles
     _pWorld = new uint64_t[_worldWidth * _worldWidth];
     memset((void*)_pWorld, 0, sizeof(uint64_t) * _worldWidth * _worldWidth);
 
@@ -36,26 +46,17 @@ Game::Game(int worldWidth) :
     // This should be max val of terrain elevation(atm max val of 5 bit uint)
     // NOTE: atm thinking of reverting to use just 4 bits (max val = 15)
     int maxElevationVal = 31;
-    world::generate_world(_pWorld, _worldWidth, maxElevationVal, worldGenSeed, 128, 20);
+    world::generate_world(
+        _pWorld,
+        _worldWidth,
+        maxElevationVal,
+        worldGenSeed,
+        128,
+        20,
+        _pObjManager
+    );
 
-    _objUpdater = new world::objects::ObjectUpdater(*this);
 
-    // NOTE: THIS IS NOT WORKING ATM since not added proper way (this faction doesnt exist in db)
-    // *Initially we always need at least one neutral faction
-    //const std::string neutralFactionName = "Neutral";
-    //GC_ubyte neutralDeployments[FACTION_MAX_DEPLOY_COUNT];
-    //memset(neutralDeployments, 2, FACTION_MAX_DEPLOY_COUNT);
-    //Faction neutralFaction("", neutralFactionName);
-    //neutralFaction.setDeployments((GC_byte*)neutralDeployments, FACTION_MAX_DEPLOY_COUNT);
-    //neutralFaction.markUpdated(false);
-    //_factions.insert(std::make_pair(neutralFaction.getName(), neutralFaction));
-
-    // initialize object types "library"
-    // _objectInfo = world::objects::load_obj_info_file("data/objects-conf.txt"); // NOTE: <- Old way of loading this TODO: delete
-    _objectInfo = world::objects::load_obj_info_db();
-    // determine total size of the objLib in bytes
-    _totalObjInfoSize = _objectInfo.size() * get_netw_objinfo_size();
-    _objInfoInitialized = true;
 
     // Load factions from db if exists
     QueryResult factionsResult = DatabaseManager::exec_query(
@@ -87,8 +88,8 @@ Game::Game(int worldWidth) :
     {
     	int randX = std::rand() % _worldWidth;
     	int randY = std::rand() % _worldWidth;
-    	if (_objUpdater->spawnObject(randX, randY, 2, neutralFaction))
-    	    _testUnits.push_back(_objUpdater->accessObject(_objUpdater->accessObjects().size() - 1));
+    	if (_pObjManager->spawnObject(randX, randY, 2, neutralFaction))
+    	    _testUnits.push_back(_pObjManager->accessObject(_pObjManager->accessObjects().size() - 1));
     }
 
     // Testing spawn some trees
@@ -113,7 +114,7 @@ Game::Game(int worldWidth) :
 
 Game::~Game()
 {
-    delete _objUpdater;
+    delete _pObjManager;
     delete[] _pWorld;
 }
 
@@ -126,7 +127,7 @@ void Game::run()
         std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
 
         // Test updating some random actions for some units..
-        for (world::objects::ObjectInstanceData* obj : _objUpdater->accessObjects()/*_testUnits*/)
+        for (world::objects::ObjectInstanceData* obj : _pObjManager->accessObjects()/*_testUnits*/)
         {
             if (obj->getObjType() == 2)
             {
@@ -160,7 +161,7 @@ void Game::run()
         //}
 
 
-        _objUpdater->update();
+        _pObjManager->update();
 
         std::chrono::time_point<std::chrono::high_resolution_clock> endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> delta = endTime - startTime ;
@@ -369,6 +370,15 @@ const Faction Game::getFaction(const std::string& name) const
         return (*it).second;
     else
         return NULL_FACTION;
+}
+
+Faction* Game::accessFaction(const std::string& name)
+{
+    std::unordered_map<std::string, Faction>::iterator it = _factions.find(name);
+    if (it != _factions.end())
+        return &it->second;
+    else
+        return nullptr;
 }
 
 uint64_t Game::getTileState(int xPos, int zPos) const

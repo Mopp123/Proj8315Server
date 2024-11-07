@@ -2,7 +2,7 @@
 #include "game/objects/Object.h"
 #include "../../../../Proj8315Common/src/Tile.h"
 #include "../../../../Proj8315Common/src/Faction.h"
-#include "game/objects/ObjectUpdater.h"
+#include "game/objects/ObjectManager.h"
 
 
 using namespace gamecommon;
@@ -14,7 +14,7 @@ namespace world
         namespace actions
         {
             static GC_ubyte run_ship_deploy(
-                    ObjectUpdater& objUpdater,
+                    ObjectManager& objManager,
                     ObjectInstanceData* obj,
                     uint64_t* worldState,
                     int worldWidth
@@ -39,7 +39,7 @@ namespace world
                     {
                         const GC_ubyte toDeploy = faction.getDeploymens()[deploymentSlot];
                         if (toDeploy != 0)
-                            objUpdater.spawnObject(x, y, toDeploy, faction);
+                            objManager.spawnObject(x, y, toDeploy, faction);
                     }
                 }
 
@@ -47,8 +47,8 @@ namespace world
             }
 
 
-            ClassAction0::ClassAction0(ObjectUpdater& objUpdater):
-                _objUpdaterRef(objUpdater)
+            ClassAction0::ClassAction0(ObjectManager& objManager):
+                _objManagerRef(objManager)
             {}
 
             GC_ubyte ClassAction0::run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth)
@@ -57,7 +57,7 @@ namespace world
                 switch(objType)
                 {
                     case 3:
-                        return run_ship_deploy(_objUpdaterRef, obj, worldState, worldWidth);
+                        return run_ship_deploy(_objManagerRef, obj, worldState, worldWidth);
                     default:
                         Debug::log(
                                 "Attempted to run ClassAction0 for "

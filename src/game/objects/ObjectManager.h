@@ -11,7 +11,7 @@ namespace world
 {
     namespace objects
     {
-        class ObjectUpdater : public StateUpdater
+        class ObjectManager : public StateUpdater
         {
         private:
             std::vector<ObjectInstanceData*> _allObjects;
@@ -21,8 +21,8 @@ namespace world
             std::vector<Action*> _actionsMapping;
 
         public:
-            ObjectUpdater(Game& gameRef);
-            ~ObjectUpdater();
+            ObjectManager(Game& gameRef);
+            ~ObjectManager();
 
             // Returns true if spawning was successful
             bool spawnObject(int x, int z, int objLibIndex, gamecommon::Faction& factionRef);

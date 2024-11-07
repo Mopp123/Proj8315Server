@@ -1,4 +1,4 @@
-#include "ObjectUpdater.h"
+#include "ObjectManager.h"
 #include "game/Game.h"
 #include "game/StateUpdater.h"
 #include "Debug.h"
@@ -16,7 +16,7 @@ namespace world
 {
     namespace objects
     {
-        ObjectUpdater::ObjectUpdater(Game& gameRef) :
+        ObjectManager::ObjectManager(Game& gameRef) :
             StateUpdater(gameRef)
         {
 
@@ -39,7 +39,7 @@ namespace world
 
         }
 
-        ObjectUpdater::~ObjectUpdater()
+        ObjectManager::~ObjectManager()
         {
             for (ObjectInstanceData* obj : _allObjects)
                 delete obj;
@@ -48,7 +48,7 @@ namespace world
                 delete a;
         }
 
-        bool ObjectUpdater::spawnObject(int x, int z, int objLibIndex, gamecommon::Faction& factionRef)
+        bool ObjectManager::spawnObject(int x, int z, int objLibIndex, gamecommon::Faction& factionRef)
         {
             // *Don't allow spawning "empty" objects accidentally
             if (objLibIndex == 0)
@@ -82,7 +82,7 @@ namespace world
             }
         }
 
-        ObjectInstanceData* ObjectUpdater::accessObject(int index)
+        ObjectInstanceData* ObjectManager::accessObject(int index)
         {
             if (index >= 0 && index < (int)_allObjects.size())
             {
@@ -95,7 +95,7 @@ namespace world
             }
         }
 
-        void ObjectUpdater::updateFunc()
+        void ObjectManager::updateFunc()
         {
             for (ObjectInstanceData* obj : _allObjects)
             {

@@ -7,16 +7,16 @@ namespace world
 {
     namespace objects
     {
-        class ObjectUpdater;
+        class ObjectManager;
 
         namespace actions
         {
             class ClassAction0 : public Action
             {
             private:
-                ObjectUpdater& _objUpdaterRef;
+                ObjectManager& _objManagerRef;
             public:
-                ClassAction0(ObjectUpdater& objUpdater);
+                ClassAction0(ObjectManager& objManager);
                 virtual GC_ubyte run(ObjectInstanceData* obj, uint64_t* worldState, int worldWidth);
             };
         }

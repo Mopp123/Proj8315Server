@@ -11,7 +11,7 @@
 #include "../../Proj8315Common/src/messages/Message.h"
 #include "../../Proj8315Common/src/messages/ObjMessages.h"
 #include "Client.h"
-#include "game/objects/ObjectUpdater.h"
+#include "game/objects/ObjectManager.h"
 
 //#define GAME_WORLD_WIDTH 2000
 
@@ -22,7 +22,7 @@ class Server;
 class Game
 {
 private:
-    friend class world::objects::ObjectUpdater;
+    friend class world::objects::ObjectManager;
 
     mutable std::mutex _mutex_faction;
     mutable std::mutex _mutex_worldState;
@@ -48,7 +48,7 @@ private:
 
     bool _run = true;
 
-    world::objects::ObjectUpdater* _objUpdater = nullptr;
+    world::objects::ObjectManager* _pObjManager = nullptr;
 
     std::vector<world::objects::ObjectInstanceData*> _testUnits;
 
@@ -69,6 +69,7 @@ public:
     const std::vector<gamecommon::ObjectInfo>& getObjInfoLib();
     const gamecommon::ObjectInfo& getObjInfo(int index) const;
     const gamecommon::Faction getFaction(const std::string& name) const;
+    gamecommon::Faction* accessFaction(const std::string& name);
 
     uint64_t getTileState(int xPos, int zPos) const;
     uint64_t getTileState(int index) const;

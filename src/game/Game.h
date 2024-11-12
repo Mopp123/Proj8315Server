@@ -68,6 +68,7 @@ public:
     gamecommon::Message getChangedFactions() const;
     const std::vector<gamecommon::ObjectInfo>& getObjInfoLib();
     const gamecommon::ObjectInfo& getObjInfo(int index) const;
+    const gamecommon::ObjectInfo& getObjInfo(const std::string& name) const;
     const gamecommon::Faction getFaction(const std::string& name) const;
     gamecommon::Faction* accessFaction(const std::string& name);
 

@@ -28,6 +28,9 @@ Game::Game(int worldWidth) :
 {
     s_pInstance = this;
 
+    // TODO: Maybe some kind of "object info library" class
+    // so we don't need to manage that shit here
+
     // initialize object types "library"
     _objectInfo = world::objects::load_obj_info_db();
     // determine total size of the objLib in bytes
@@ -358,9 +361,33 @@ const ObjectInfo& Game::getObjInfo(int index) const
     }
     else
     {
-        Debug::log("@Game::getObjInfo(int) Accessed invalid obj info lib index");
+        Debug::log(
+            "@Game::getObjInfo(1) Accessed invalid obj info lib index",
+            Debug::MessageType::WARNING
+        );
         return _objectInfo[0]; // index 0 should ALWAYS be "empty object"
     }
+}
+
+const ObjectInfo& Game::getObjInfo(const std::string& name) const
+{
+    Debug::log(
+        "@Game::getObjInfo(2)"
+        "Getting object using name. This is discouraged due to its' slowness. "
+        "You should use Game::getObjInfo(1) with index instead!",
+        Debug::MessageType::WARNING
+    );
+    for (const ObjectInfo& objInfo : _objectInfo)
+    {
+        std::string objName(objInfo.name);
+        if (objName == name)
+            return objInfo;
+    }
+    Debug::log(
+        "@Game::getObjInfo(2) Failed to find object using name: " + name,
+        Debug::MessageType::WARNING
+    );
+    return _objectInfo[0]; // index 0 should ALWAYS be "empty object"
 }
 
 const Faction Game::getFaction(const std::string& name) const

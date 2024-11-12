@@ -53,7 +53,7 @@ namespace world
             // *Don't allow spawning "empty" objects accidentally
             if (objLibIndex == 0)
             {
-                Debug::log("Attempted to spawn empty object");
+                Debug::log("Attempted to spawn empty object", Debug::MessageType::ERROR);
                 return false;
             }
             const int worldWidth = _gameRef._worldWidth;

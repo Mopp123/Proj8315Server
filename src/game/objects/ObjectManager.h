@@ -25,12 +25,31 @@ namespace world
             ~ObjectManager();
 
             // Returns true if spawning was successful
-            bool spawnObject(int x, int z, int objLibIndex, gamecommon::Faction& factionRef);
+            bool spawnObject(
+                int x,
+                int z,
+                int objLibIndex,
+                gamecommon::Faction& factionRef
+            );
+            bool spawnObject(
+                int x,
+                int z,
+                const std::string& objName,
+                gamecommon::Faction& factionRef
+            );
             ObjectInstanceData* accessObject(int index);
             inline std::vector<ObjectInstanceData*>& accessObjects() { return _allObjects; }
             inline size_t getObjectCount() const { return _allObjects.size(); }
+
         protected:
             virtual void updateFunc();
+
+            bool spawnObjectRaw(
+                int x,
+                int z,
+                uint64_t objInitialState,
+                gamecommon::Faction& factionRef
+            );
         };
     }
 }

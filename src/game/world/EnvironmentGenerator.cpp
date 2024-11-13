@@ -75,13 +75,15 @@ namespace world
         // TODO: Also way to access factions by indices and ENSURE THAT Neutral IS AT 0
         Faction* neutralFaction = Game::get()->accessFaction("Neutral");
 
+        std::string objName = temperature >= TileStateTemperature::TILE_STATE_warm ? "Palm Tree" : "Tree";
+
         if (diceThrow >= requiredScore)
         {
             // NOTE: ATM JUST TESTING
             // TODO: Different env obj types for different environments!
             int x = tileIndex % worldWidth;
             int y = tileIndex / worldWidth;
-            pObjManager->spawnObject(x, y, 1, *neutralFaction);
+            pObjManager->spawnObject(x, y, objName, *neutralFaction);
         }
     }
 

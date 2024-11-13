@@ -61,20 +61,27 @@ VALUES (
 ),
 (
     1,
-    'Tree1',
+    'Tree',
     'Testing tree object here...',
     0,
     '{}'
 ),
 (
     2,
-    'Movement Test',
+    'Palm Tree',
+    'Testing tree object here...',
+    0,
+    '{}'
+),
+(
+    3,
+    'Unit Test',
     'For testing movement stuff',
     2,
     '{}'
 ),
 (
-    3,
+    4,
     'Ship Test',
     'For testing ship landing',
     2,

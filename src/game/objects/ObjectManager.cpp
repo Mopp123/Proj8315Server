@@ -48,14 +48,13 @@ namespace world
                 delete a;
         }
 
-        bool ObjectManager::spawnObject(int x, int z, int objLibIndex, gamecommon::Faction& factionRef)
+        bool ObjectManager::spawnObjectRaw(
+            int x,
+            int z,
+            uint64_t objInitialState,
+            gamecommon::Faction& factionRef
+        )
         {
-            // *Don't allow spawning "empty" objects accidentally
-            if (objLibIndex == 0)
-            {
-                Debug::log("Attempted to spawn empty object", Debug::MessageType::ERROR);
-                return false;
-            }
             const int worldWidth = _gameRef._worldWidth;
             const int tileIndex = x + z * worldWidth;
             if (tileIndex >= 0 && tileIndex < (worldWidth * worldWidth))
@@ -64,7 +63,7 @@ namespace world
                 if (!get_tile_thingid(originalState))
                 {
                     // Add the "objects initial state" to the tile's original state (so all terrain-detail/effects/etc stuff may remain, if we want)
-                    uint64_t newState = originalState | _gameRef._objectInfo[objLibIndex].initialState;
+                    uint64_t newState = originalState | objInitialState;
                     ObjectInstanceData* newObj = new ObjectInstanceData(x, z, newState, factionRef);
                     _allObjects.push_back(newObj);
                     _gameRef.setTileState(tileIndex, newState);
@@ -80,6 +79,44 @@ namespace world
                 //Debug::log("Attempted to spawn object outside of map bounds!");
                 return false;
             }
+        }
+
+        bool ObjectManager::spawnObject(
+            int x,
+            int z,
+            int objLibIndex,
+            gamecommon::Faction& factionRef
+        )
+        {
+            // *Don't allow spawning "empty" objects accidentally
+            if (objLibIndex == 0)
+            {
+                Debug::log(
+                    "Attempted to spawn empty object using type id 0",
+                    Debug::MessageType::ERROR
+                );
+                return false;
+            }
+            return spawnObjectRaw(x, z, _gameRef._objectInfo[objLibIndex].initialState, factionRef);
+        }
+
+        bool ObjectManager::spawnObject(
+            int x,
+            int z,
+            const std::string& objName,
+            gamecommon::Faction& factionRef
+        )
+        {
+            const ObjectInfo& objInfo = _gameRef.getObjInfo(objName);
+            if (objInfo.initialState == 0)
+            {
+                Debug::log(
+                    "Failed to spawn object with name: <" + objName + "> Object of this name doesn't exist!",
+                    Debug::MessageType::ERROR
+                );
+                return false;
+            }
+            return spawnObjectRaw(x, z, objInfo.initialState, factionRef);
         }
 
         ObjectInstanceData* ObjectManager::accessObject(int index)

@@ -91,28 +91,9 @@ Game::Game(int worldWidth) :
     {
     	int randX = std::rand() % _worldWidth;
     	int randY = std::rand() % _worldWidth;
-    	if (_pObjManager->spawnObject(randX, randY, 2, neutralFaction))
+    	if (_pObjManager->spawnObject(randX, randY, "Unit Test", neutralFaction))
     	    _testUnits.push_back(_pObjManager->accessObject(_pObjManager->accessObjects().size() - 1));
     }
-
-    // Testing spawn some trees
-    /*
-    for (int y = 0; y < _worldWidth; ++y)
-    {
-        for (int x = 0; x < _worldWidth; ++x)
-        {
-            int index = x + y * _worldWidth;
-            uint64_t currentState = _pWorld[index];
-            GC_ubyte terrType = get_tile_terrtype(currentState);
-            if (terrType == 4)
-            {
-                int diceThrow = std::rand() % 100;
-                if (diceThrow > 40)
-                    _objUpdater->spawnObject(x, y, 1, neutralFaction);
-            }
-        }
-    }
-    */
 }
 
 Game::~Game()
@@ -132,7 +113,7 @@ void Game::run()
         // Test updating some random actions for some units..
         for (world::objects::ObjectInstanceData* obj : _pObjManager->accessObjects()/*_testUnits*/)
         {
-            if (obj->getObjType() == 2)
+            if (obj->getObjType() == 3)
             {
                 if (obj->getActionQueue().size() < 2)
                 {
@@ -371,12 +352,14 @@ const ObjectInfo& Game::getObjInfo(int index) const
 
 const ObjectInfo& Game::getObjInfo(const std::string& name) const
 {
+    /*
     Debug::log(
         "@Game::getObjInfo(2)"
         "Getting object using name. This is discouraged due to its' slowness. "
         "You should use Game::getObjInfo(1) with index instead!",
         Debug::MessageType::WARNING
     );
+    */
     for (const ObjectInfo& objInfo : _objectInfo)
     {
         std::string objName(objInfo.name);

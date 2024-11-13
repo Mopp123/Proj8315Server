@@ -68,20 +68,27 @@ VALUES (
 ),
 (
     2,
-    'Palm Tree',
+    'Spruce Tree',
     'Testing tree object here...',
     0,
     '{}'
 ),
 (
     3,
+    'Palm Tree',
+    'Testing tree object here...',
+    0,
+    '{}'
+),
+(
+    4,
     'Unit Test',
     'For testing movement stuff',
     2,
     '{}'
 ),
 (
-    4,
+    5,
     'Ship Test',
     'For testing ship landing',
     2,

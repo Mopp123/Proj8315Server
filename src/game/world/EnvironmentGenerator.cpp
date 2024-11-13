@@ -75,7 +75,28 @@ namespace world
         // TODO: Also way to access factions by indices and ENSURE THAT Neutral IS AT 0
         Faction* neutralFaction = Game::get()->accessFaction("Neutral");
 
-        std::string objName = temperature >= TileStateTemperature::TILE_STATE_warm ? "Palm Tree" : "Tree";
+        std::string objName = "Tree";
+        // Add some variety what env obj to spawn...
+        if (temperature == TileStateTemperature::TILE_STATE_mild)
+        {
+            // sometimes put spruce in mild areas too...
+            int r = std::rand() % 5;
+            if (r == 0)
+                objName = "Spruce Tree";
+        }
+        else if (temperature == TileStateTemperature::TILE_STATE_hot ||
+            temperature == TileStateTemperature::TILE_STATE_burning
+            )
+        {
+            objName = "Palm Tree";
+        }
+        else if (temperature == TileStateTemperature::TILE_STATE_chilly ||
+            temperature == TileStateTemperature::TILE_STATE_cold ||
+            temperature == TileStateTemperature::TILE_STATE_freezing
+            )
+        {
+            objName = "Spruce Tree";
+        }
 
         if (diceThrow >= requiredScore)
         {

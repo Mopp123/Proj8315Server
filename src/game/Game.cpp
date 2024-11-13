@@ -113,7 +113,7 @@ void Game::run()
         // Test updating some random actions for some units..
         for (world::objects::ObjectInstanceData* obj : _pObjManager->accessObjects()/*_testUnits*/)
         {
-            if (obj->getObjType() == 3)
+            if (obj->getObjType() == 4)
             {
                 if (obj->getActionQueue().size() < 2)
                 {

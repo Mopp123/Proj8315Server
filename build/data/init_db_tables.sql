@@ -6,6 +6,8 @@ CREATE TABLE users (
     name VARCHAR(32) UNIQUE NOT NULL,
     password VARCHAR(32),
     logged_in BOOLEAN DEFAULT FALSE,
+    -- Atm all users are admins for testing purposes...
+    admin BOOLEAN DEFAULT TRUE,
     -- NOTE: tile coords in db are recorded as coordinates where user logged out / disconnected
     tile_x INTEGER DEFAULT 0,
     tile_z INTEGER DEFAULT 0

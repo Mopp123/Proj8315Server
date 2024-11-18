@@ -10,6 +10,7 @@
 #include "Server.h"
 #include "msgs/General.h"
 #include "msgs/WorldState.h"
+#include "msgs/Admin.h"
 #include "Debug.h"
 
 
@@ -30,6 +31,7 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFactionRequest, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__FactionListRequest, msgs::get_all_factions));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__SpawnRequest, msgs::spawn_object));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::server_shutdown));
 }

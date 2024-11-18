@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "../../Proj8315Common/src/Common.h"
 #include "../../Proj8315Common/src/messages/Message.h"
 #include "Client.h"

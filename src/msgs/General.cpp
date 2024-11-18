@@ -76,9 +76,10 @@ namespace msgs
                     {
                         std::string dbUserID = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__ID);
                         std::string dbUsername = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__NAME);
+                        bool isAdmin = result.getValue<bool>(0, DATABASE_COLUMN__USERS__IS_ADMIN);
                         int tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
                         int tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
-                        User user(dbUserID, dbUsername.data(), dbUsername.size(), tileX, tileZ);
+                        User user(dbUserID, dbUsername.data(), dbUsername.size(), isAdmin, tileX, tileZ);
 
                         QueryResult setLoggedInResult = DatabaseManager::exec_query(
                             "UPDATE users SET logged_in=TRUE WHERE id='" + dbUserID + "';"

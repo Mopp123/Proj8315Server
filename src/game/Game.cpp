@@ -233,6 +233,23 @@ Message Game::addFaction(Server& server, const Client& client, const std::string
     return CreateFactionResponse(success, errorMessage, faction);
 }
 
+bool Game::spawnObject(
+    const std::string& factionName,
+    GC_ubyte objLibIndex,
+    int32_t targetX,
+    int32_t targetY
+)
+{
+    // Shouldn't be necessary atm to lock factions but just in case if I end up updating some faction data
+    // in spawning funcs...
+    std::lock_guard<std::mutex> lock(_mutex_faction);
+
+    // Don't need to lock world state here since object manager deals with that by callign funcs only which are
+    // thread safe in the "game's context"
+    Faction& faction = _factions[factionName];
+    return _pObjManager->spawnObject(targetX, targetY, (int)objLibIndex, faction);
+}
+
 Message Game::getWorldState(int32_t xPos, int32_t zPos, int observeRadius) const
 {
     size_t bufSize = MESSAGE_REQUIRED_SIZE__WorldStateMsg;

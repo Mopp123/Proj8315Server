@@ -74,11 +74,7 @@ namespace world
                     return false;
                 }
             }
-            else
-            {
-                //Debug::log("Attempted to spawn object outside of map bounds!");
-                return false;
-            }
+            return false;
         }
 
         bool ObjectManager::spawnObject(

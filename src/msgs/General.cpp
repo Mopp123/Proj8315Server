@@ -44,6 +44,9 @@ namespace msgs
             const std::string passwd = loginReqMsg.getPasswordData();
             std::string errorMessage = "";
             bool success = false;
+            bool isAdmin = false;
+            int32_t tileX = 0;
+            int32_t tileZ = 0;
             Faction userFaction = NULL_FACTION;
 
             QueryResult result = DatabaseManager::exec_query(
@@ -76,9 +79,9 @@ namespace msgs
                     {
                         std::string dbUserID = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__ID);
                         std::string dbUsername = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__NAME);
-                        bool isAdmin = result.getValue<bool>(0, DATABASE_COLUMN__USERS__IS_ADMIN);
-                        int tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
-                        int tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
+                        isAdmin = result.getValue<bool>(0, DATABASE_COLUMN__USERS__IS_ADMIN);
+                        tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
+                        tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_Z);
                         User user(dbUserID, dbUsername.data(), dbUsername.size(), isAdmin, tileX, tileZ);
 
                         QueryResult setLoggedInResult = DatabaseManager::exec_query(
@@ -171,6 +174,9 @@ namespace msgs
 
             return LoginResponse(
                 success,
+                isAdmin,
+                tileX,
+                tileZ,
                 userFaction,
                 errorMessage
             );
@@ -189,6 +195,11 @@ namespace msgs
             User clientUser = server.getUser(client);
             if (clientUser != NULL_USER)
             {
+                // Before logging out -> save last received world pos to db
+                QueryResult setWorldPosResult = DatabaseManager::exec_query(
+                    "UPDATE users SET tile_x='" + std::to_string(clientUser.getX()) + "', tile_z='" + std::to_string(clientUser.getZ()) + "' WHERE id='" + clientUser.getID() + "';"
+                );
+
                 if (server.logoutUser(client, clientUser))
                     return Message(MESSAGE_TYPE__LogoutResponse, MESSAGE_ENTRY_SIZE__header);
                 else

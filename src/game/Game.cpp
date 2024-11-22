@@ -448,6 +448,33 @@ void Game::setTileState(int index, uint64_t newState)
     }
 }
 
+void Game::setTileState(
+    GC_ubyte radius,
+    int xPos,
+    int zPos,
+    GC_ubyte elevation,
+    GC_ubyte temperature,
+    GC_ubyte terrainType
+)
+{
+    const int iRadius = (int)radius;
+    std::lock_guard<std::mutex> lock(_mutex_worldState);
+    for (int z = zPos - iRadius; z <= zPos + iRadius; ++z)
+    {
+        for (int x = xPos - iRadius; x <= xPos + iRadius; ++x)
+        {
+            int tileIndex = x + z * _worldWidth;
+            if (tileIndex >= 0 && tileIndex < _worldWidth * _worldWidth)
+            {
+                uint64_t& tile = _pWorld[tileIndex];
+                set_tile_terrelevation(tile, elevation);
+                set_tile_temperature(tile, temperature);
+                set_tile_terrtype(tile, terrainType);
+            }
+        }
+    }
+}
+
 float Game::getDeltaTime()
 {
     return _deltaTime;

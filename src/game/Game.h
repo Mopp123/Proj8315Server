@@ -79,6 +79,14 @@ public:
     uint64_t getTileState(int index) const;
     void setTileState(int xPos, int zPos, uint64_t newState);
     void setTileState(int index, uint64_t newState);
+    void setTileState(
+        GC_ubyte radius,
+        int xPos,
+        int zPos,
+        GC_ubyte elevation,
+        GC_ubyte temperature,
+        GC_ubyte terrainType
+    );
 
     float getStatValue(const char* name, int statIndex) const;
     float getDeltaTime();

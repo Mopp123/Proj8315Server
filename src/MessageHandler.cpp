@@ -31,7 +31,11 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFactionRequest, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__FactionListRequest, msgs::get_all_factions));
+
+    // Admin messages
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__SpawnRequest, msgs::spawn_object));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__TerrainModRequest, msgs::terrain_modification));
+
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::server_shutdown));
 }

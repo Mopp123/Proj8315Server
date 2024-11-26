@@ -10,6 +10,7 @@
 #include "Server.h"
 #include "msgs/General.h"
 #include "msgs/WorldState.h"
+#include "msgs/Admin.h"
 #include "Debug.h"
 
 
@@ -22,7 +23,7 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _pRecvBuf = new GC_byte[_maxRecvBufLen];
     memset(_pRecvBuf, 0, _maxRecvBufLen);
 
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerMessage, msgs::get_server_message));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerInfo, msgs::get_server_info));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__LoginRequest, msgs::user_login));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__LogoutRequest, msgs::user_logout));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegisterRequest, msgs::user_register));
@@ -30,6 +31,11 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__CreateFactionRequest, msgs::create_new_faction));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UpdateObserverProperties, msgs::update_observer));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__FactionListRequest, msgs::get_all_factions));
+
+    // Admin messages
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__SpawnRequest, msgs::spawn_object));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__TerrainModRequest, msgs::terrain_modification));
+
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__GetWorldState, msgs::msg_fetchWorldState));
     //_msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerShutdown, msgs::server_shutdown));
 }

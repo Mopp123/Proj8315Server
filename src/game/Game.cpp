@@ -233,6 +233,23 @@ Message Game::addFaction(Server& server, const Client& client, const std::string
     return CreateFactionResponse(success, errorMessage, faction);
 }
 
+bool Game::spawnObject(
+    const std::string& factionName,
+    GC_ubyte objLibIndex,
+    int32_t targetX,
+    int32_t targetY
+)
+{
+    // Shouldn't be necessary atm to lock factions but just in case if I end up updating some faction data
+    // in spawning funcs...
+    std::lock_guard<std::mutex> lock(_mutex_faction);
+
+    // Don't need to lock world state here since object manager deals with that by callign funcs only which are
+    // thread safe in the "game's context"
+    Faction& faction = _factions[factionName];
+    return _pObjManager->spawnObject(targetX, targetY, (int)objLibIndex, faction);
+}
+
 Message Game::getWorldState(int32_t xPos, int32_t zPos, int observeRadius) const
 {
     size_t bufSize = MESSAGE_REQUIRED_SIZE__WorldStateMsg;
@@ -428,6 +445,33 @@ void Game::setTileState(int index, uint64_t newState)
     {
         std::lock_guard<std::mutex> lock(_mutex_worldState);
         _pWorld[index] = newState;
+    }
+}
+
+void Game::setTileState(
+    GC_ubyte radius,
+    int xPos,
+    int zPos,
+    GC_ubyte elevation,
+    GC_ubyte temperature,
+    GC_ubyte terrainType
+)
+{
+    const int iRadius = (int)radius;
+    std::lock_guard<std::mutex> lock(_mutex_worldState);
+    for (int z = zPos - iRadius; z <= zPos + iRadius; ++z)
+    {
+        for (int x = xPos - iRadius; x <= xPos + iRadius; ++x)
+        {
+            int tileIndex = x + z * _worldWidth;
+            if (tileIndex >= 0 && tileIndex < _worldWidth * _worldWidth)
+            {
+                uint64_t& tile = _pWorld[tileIndex];
+                set_tile_terrelevation(tile, elevation);
+                set_tile_temperature(tile, temperature);
+                set_tile_terrtype(tile, terrainType);
+            }
+        }
     }
 }
 

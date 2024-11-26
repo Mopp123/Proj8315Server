@@ -1,11 +1,21 @@
 
 -- Create default tables
+
+-- Some server info stuff
+CREATE TABLE server_info (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message VARCHAR(200) UNIQUE NOT NULL
+);
+
+
 -- Users
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(32) UNIQUE NOT NULL,
     password VARCHAR(32),
     logged_in BOOLEAN DEFAULT FALSE,
+    -- Atm all users are admins for testing purposes...
+    admin BOOLEAN DEFAULT TRUE,
     -- NOTE: tile coords in db are recorded as coordinates where user logged out / disconnected
     tile_x INTEGER DEFAULT 0,
     tile_z INTEGER DEFAULT 0
@@ -86,11 +96,11 @@ VALUES (
     'For testing movement stuff',
     2,
     '{}'
-),
+)/*,
 (
     5,
     'Ship Test',
     'For testing ship landing',
     2,
     '{Deploy}'
-);
+)*/;

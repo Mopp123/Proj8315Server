@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "../../Proj8315Common/src/Common.h"
 #include "../../Proj8315Common/src/messages/Message.h"
 #include "Client.h"
@@ -11,7 +10,7 @@ class Server;
 
 namespace msgs
 {
-    gamecommon::Message get_server_message(Server& server, const Client& client, gamecommon::Message& msg);
+    gamecommon::Message get_server_info(Server& server, const Client& client, gamecommon::Message& msg);
     gamecommon::Message user_login(Server& server, const Client& client, gamecommon::Message& msg);
     gamecommon::Message user_logout(Server& server, const Client& client, gamecommon::Message& msg);
     gamecommon::Message user_register(Server& server, const Client& client, gamecommon::Message& msg);

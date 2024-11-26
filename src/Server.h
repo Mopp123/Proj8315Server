@@ -39,7 +39,6 @@ private:
     // key = client's address
     // NOTE: Client may be accepted but not associated with user
     std::unordered_map<std::string, Client> _clients;
-    // std::unordered_map<std::string, gamecommon::User> _users; // TODO: Delete this (Unnecessary after db integration)
 
     // Logged in client addr - user mapping
     std::unordered_map<std::string, gamecommon::User> _clientUserMapping;

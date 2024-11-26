@@ -44,6 +44,8 @@ private:
 
     uint64_t* _pWorld = nullptr;
 
+    // Fucking disgusting way of accessing this atm
+    // TODO: Make this shit more bearable
     static Game* s_pInstance;
 
     bool _run = true;
@@ -61,6 +63,7 @@ public:
     void resetChangedFactionsStatus();
 
     gamecommon::Message addFaction(Server& server, const Client& client, const std::string factionName);
+    bool spawnObject(const std::string& factionName, GC_ubyte objLibIndex, int32_t targetX, int32_t targetY);
     // Returns current "dynamic" world state
     gamecommon::Message getWorldState(int32_t xPos, int32_t zPos, int observeRadius) const;
     // Returns all factions' data
@@ -76,9 +79,20 @@ public:
     uint64_t getTileState(int index) const;
     void setTileState(int xPos, int zPos, uint64_t newState);
     void setTileState(int index, uint64_t newState);
+    void setTileState(
+        GC_ubyte radius,
+        int xPos,
+        int zPos,
+        GC_ubyte elevation,
+        GC_ubyte temperature,
+        GC_ubyte terrainType
+    );
 
     float getStatValue(const char* name, int statIndex) const;
     float getDeltaTime();
+
+    // Fucking disgusting way of accessing this atm
+    // TODO: Make this shit more bearable
     static Game* get();
 
     inline const std::vector<gamecommon::ObjectInfo>& getObjLib() const { return _objectInfo; }

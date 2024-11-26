@@ -16,20 +16,21 @@ using namespace gamecommon;
 namespace msgs
 {
     // TODO: Create message of type "GetServerMessage" which takes just takes the message string as parameter
-    Message get_server_message(Server& server, const Client& client, Message& msg)
+    Message get_server_info(Server& server, const Client& client, Message& msg)
     {
-        std::string message = "Welcome! Testing testing...";
-
-        size_t bufSize = MESSAGE_SIZE__ServerMessageResponse;
-        GC_byte respData[bufSize];
-        memset(respData, 0, bufSize);
-
-        const int32_t messageType = MESSAGE_TYPE__ServerMessage;
-        memcpy(respData, &messageType, sizeof(int32_t));
-        memcpy(respData + sizeof(int32_t), message.data(), message.size());
-
-        // NOTE: just a hack atm
-        return Message(respData, bufSize, bufSize);
+        QueryResult result = DatabaseManager::exec_query(
+            "SELECT * FROM server_info;"
+        );
+        std::string serverMessage = "error";
+        if (result.status == QUERY_STATUS__SUCCESS)
+        {
+            // We should never have more than 1 rows here...
+            if (result.result.size() == 1)
+            {
+                serverMessage = result.getValue<std::string>(0, DATABASE_COLUMN__SERVER_INFO__MESSAGE);
+            }
+        }
+        return ServerInfoResponse(serverMessage);
     }
 
 
@@ -44,6 +45,9 @@ namespace msgs
             const std::string passwd = loginReqMsg.getPasswordData();
             std::string errorMessage = "";
             bool success = false;
+            bool isAdmin = false;
+            int32_t tileX = 0;
+            int32_t tileZ = 0;
             Faction userFaction = NULL_FACTION;
 
             QueryResult result = DatabaseManager::exec_query(
@@ -76,9 +80,10 @@ namespace msgs
                     {
                         std::string dbUserID = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__ID);
                         std::string dbUsername = result.getValue<std::string>(0, DATABASE_COLUMN__USERS__NAME);
-                        int tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
-                        int tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
-                        User user(dbUserID, dbUsername.data(), dbUsername.size(), tileX, tileZ);
+                        isAdmin = result.getValue<bool>(0, DATABASE_COLUMN__USERS__IS_ADMIN);
+                        tileX = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_X);
+                        tileZ = result.getValue<int>(0, DATABASE_COLUMN__USERS__TILE_Z);
+                        User user(dbUserID, dbUsername.data(), dbUsername.size(), isAdmin, tileX, tileZ);
 
                         QueryResult setLoggedInResult = DatabaseManager::exec_query(
                             "UPDATE users SET logged_in=TRUE WHERE id='" + dbUserID + "';"
@@ -170,6 +175,9 @@ namespace msgs
 
             return LoginResponse(
                 success,
+                isAdmin,
+                tileX,
+                tileZ,
                 userFaction,
                 errorMessage
             );
@@ -188,6 +196,11 @@ namespace msgs
             User clientUser = server.getUser(client);
             if (clientUser != NULL_USER)
             {
+                // Before logging out -> save last received world pos to db
+                QueryResult setWorldPosResult = DatabaseManager::exec_query(
+                    "UPDATE users SET tile_x='" + std::to_string(clientUser.getX()) + "', tile_z='" + std::to_string(clientUser.getZ()) + "' WHERE id='" + clientUser.getID() + "';"
+                );
+
                 if (server.logoutUser(client, clientUser))
                     return Message(MESSAGE_TYPE__LogoutResponse, MESSAGE_ENTRY_SIZE__header);
                 else

@@ -17,8 +17,8 @@ CREATE TABLE users (
     -- Atm all users are admins for testing purposes...
     admin BOOLEAN DEFAULT TRUE,
     -- NOTE: tile coords in db are recorded as coordinates where user logged out / disconnected
-    tile_x INTEGER DEFAULT 0,
-    tile_z INTEGER DEFAULT 0
+    tile_x INTEGER DEFAULT 120,
+    tile_z INTEGER DEFAULT 98
 );
 
 

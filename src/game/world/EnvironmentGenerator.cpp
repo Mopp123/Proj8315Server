@@ -298,8 +298,6 @@ namespace world
                 tilesToCheck.erase(index);
 
             first = false;
-
-            Debug::log("___TEST___MAX FERT SCORE: " + std::to_string(maxFertScore));
         }
     }
 }

@@ -57,21 +57,35 @@ void MessageHandler::handleClientMessages()
 
             if (readBytes > 0)
             {
-                Message msg(_pRecvBuf, readBytes, readBytes, MESSAGE_MAX_SIZE);
-                Message response = processMessage(client.second, msg);
-                if (response != NULL_MESSAGE)
+                ssize_t currentOffset = 0;
+
+                // NOTE: Atm with websockify multiple messages may be concatenated
+                //  -> attempt to deal with that
+                // NOTE: If too many concatenated messages we fuck up since receive buffer is set to be
+                // quite small atm!
+                while (currentOffset < readBytes)
                 {
-                    std::lock_guard<std::mutex> lock(_mutex);
-                    ssize_t sentBytes = send(
-                        client.second.getConnSD(),
-                        response.getData(),
-                        response.getDataSize(),
-                        MSG_NOSIGNAL
-                    );
-                    if (sentBytes < 0)
-                        Debug::log("ERROR ON SENDING!");
-                    else
-                        Debug::log("Sent response message to req of type: " + std::to_string(msg.getType()) + " size = " + std::to_string(response.getDataSize()));
+                    GC_byte* pMessageBuf = _pRecvBuf + currentOffset;
+                    int32_t messageType = *((int32_t*)pMessageBuf);
+                    size_t messageSize = get_message_size(messageType);
+
+                    Message msg(pMessageBuf, messageSize, messageSize);
+                    Message response = processMessage(client.second, msg);
+                    if (response != NULL_MESSAGE)
+                    {
+                        std::lock_guard<std::mutex> lock(_mutex);
+                        ssize_t sentBytes = send(
+                            client.second.getConnSD(),
+                            response.getData(),
+                            response.getDataSize(),
+                            MSG_NOSIGNAL
+                        );
+                        if (sentBytes < 0)
+                            Debug::log("ERROR ON SENDING!");
+                        else
+                            Debug::log("Sent response message to req of type: " + std::to_string(msg.getType()) + " size = " + std::to_string(response.getDataSize()));
+                    }
+                    currentOffset += messageSize;
                 }
             }
             memset(_pRecvBuf, 0, _maxRecvBufLen);

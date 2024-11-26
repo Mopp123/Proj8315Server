@@ -4,7 +4,7 @@ version: "3.7"
 services:
 
   proj8315:
-    container_name: proj8315_gameserver
+    container_name: proj8315-server
     command: bash start_container.sh
     image: proj8315-gameserver
     volumes:

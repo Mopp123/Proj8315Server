@@ -23,7 +23,7 @@ MessageHandler::MessageHandler(Server& server, Game& game) :
     _pRecvBuf = new GC_byte[_maxRecvBufLen];
     memset(_pRecvBuf, 0, _maxRecvBufLen);
 
-    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerMessage, msgs::get_server_message));
+    _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__ServerInfo, msgs::get_server_info));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__LoginRequest, msgs::user_login));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__LogoutRequest, msgs::user_logout));
     _msgFuncMapping.insert(std::make_pair(MESSAGE_TYPE__UserRegisterRequest, msgs::user_register));

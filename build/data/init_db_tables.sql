@@ -1,5 +1,13 @@
 
 -- Create default tables
+
+-- Some server info stuff
+CREATE TABLE server_info (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message VARCHAR(200) UNIQUE NOT NULL
+);
+
+
 -- Users
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -88,11 +96,11 @@ VALUES (
     'For testing movement stuff',
     2,
     '{}'
-),
+)/*,
 (
     5,
     'Ship Test',
     'For testing ship landing',
     2,
     '{Deploy}'
-);
+)*/;

@@ -16,20 +16,21 @@ using namespace gamecommon;
 namespace msgs
 {
     // TODO: Create message of type "GetServerMessage" which takes just takes the message string as parameter
-    Message get_server_message(Server& server, const Client& client, Message& msg)
+    Message get_server_info(Server& server, const Client& client, Message& msg)
     {
-        std::string message = "Welcome! Testing testing...";
-
-        size_t bufSize = MESSAGE_SIZE__ServerMessageResponse;
-        GC_byte respData[bufSize];
-        memset(respData, 0, bufSize);
-
-        const int32_t messageType = MESSAGE_TYPE__ServerMessage;
-        memcpy(respData, &messageType, sizeof(int32_t));
-        memcpy(respData + sizeof(int32_t), message.data(), message.size());
-
-        // NOTE: just a hack atm
-        return Message(respData, bufSize, bufSize);
+        QueryResult result = DatabaseManager::exec_query(
+            "SELECT * FROM server_info;"
+        );
+        std::string serverMessage = "error";
+        if (result.status == QUERY_STATUS__SUCCESS)
+        {
+            // We should never have more than 1 rows here...
+            if (result.result.size() == 1)
+            {
+                serverMessage = result.getValue<std::string>(0, DATABASE_COLUMN__SERVER_INFO__MESSAGE);
+            }
+        }
+        return ServerInfoResponse(serverMessage);
     }
 
 

@@ -4,7 +4,25 @@
 -- Some server info stuff
 CREATE TABLE server_info (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    message VARCHAR(200) UNIQUE NOT NULL
+    message VARCHAR(400) UNIQUE NOT NULL
+);
+
+INSERT INTO server_info (
+    message
+)
+VALUES (
+    E'Welcome!\n'
+    'Currently testing the most basic\n'
+    'functionalities. The client isn''t\n'
+    'very optimized currently so you\n'
+    'may experience some stuttering.\n'
+    '\n*Use w,a,s,d to move\n'
+    '*Middle mouse button to rotate\n'
+    '*Left click on a tile to select it\n'
+    '*Right click on a tile to open tile\n'
+    'options menu\n'
+    '\nSettings button doesn''t do\n'
+    'anything at the moment...'
 );
 
 

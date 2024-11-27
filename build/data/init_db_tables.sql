@@ -13,9 +13,10 @@ INSERT INTO server_info (
 VALUES (
     E'Welcome!\n'
     'Currently testing the most basic\n'
-    'functionalities. The client isn''t\n'
-    'very optimized currently so you\n'
-    'may experience some stuttering.\n'
+    'functionalities. REMEMBER to logout\n'
+    '(top right corner) or you get\n'
+    'permanently locked off of your\n'
+    'account\n'
     '\n*Use w,a,s,d to move\n'
     '*Middle mouse button to rotate\n'
     '*Left click on a tile to select it\n'

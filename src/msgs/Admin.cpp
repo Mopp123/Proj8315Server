@@ -92,7 +92,7 @@ namespace msgs
             GC_ubyte temperature = req.getTemperature();
             GC_ubyte terrainType = req.getTerrainType();
 
-            if (elevation >= TILE_STATE_MAX_terrElevation)
+            if (elevation > TILE_STATE_MAX_terrElevation)
             {
                 Debug::log(
                     "Failed to modify terrain by admin " + username + " "
@@ -102,17 +102,17 @@ namespace msgs
                 );
                 return NULL_MESSAGE;
             }
-            if (temperature >= TILE_STATE_MAX_temperature)
+            if (temperature > TILE_STATE_MAX_temperature)
             {
                 Debug::log(
                     "Failed to modify terrain by admin " + username + " "
                     "temperature value too high(" + std::to_string(temperature) + ") "
-                    "Max elevation value is " + std::to_string(TILE_STATE_MAX_temperature),
+                    "Max temperature value is " + std::to_string(TILE_STATE_MAX_temperature),
                     Debug::MessageType::ERROR
                 );
                 return NULL_MESSAGE;
             }
-            if (terrainType >= TILE_STATE_MAX_terrType)
+            if (terrainType > TILE_STATE_MAX_terrType)
             {
                 Debug::log(
                     "Failed to modify terrain by admin " + username + " "
